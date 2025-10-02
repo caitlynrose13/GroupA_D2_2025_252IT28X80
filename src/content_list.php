@@ -2,6 +2,7 @@
 // filepath: src/content_list.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/program_structure.php';
 
 // Handle delete action
 if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin'])) {
@@ -41,7 +42,6 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 
 // Get filter parameters
 $filter_type = $_GET['type'] ?? '';
-$filter_cycle = $_GET['cycle'] ?? '';
 $filter_month = $_GET['month'] ?? '';
 
 // Build query with filters
@@ -51,10 +51,6 @@ $params = [];
 if (!empty($filter_type)) {
     $where_conditions[] = 'content_type = :type';
     $params['type'] = $filter_type;
-}
-if (!empty($filter_cycle)) {
-    $where_conditions[] = 'cycle_number = :cycle';
-    $params['cycle'] = $filter_cycle;
 }
 if (!empty($filter_month)) {
     $where_conditions[] = 'month_number = :month';

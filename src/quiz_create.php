@@ -207,23 +207,46 @@ $error = $_GET['error'] ?? '';
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="form-group">
                         <label for="cycle_number">Cycle Number <span class="required">*</span></label>
-                        <select id="cycle_number" name="cycle_number" required>
+                        <select id="cycle_number" name="cycle_number" required onchange="updateMonthNumber()">
                             <option value="">Select Cycle...</option>
-                            <option value="1">Cycle 1</option>
-                            <option value="2">Cycle 2</option>
-                            <option value="3">Cycle 3</option>
+                            <option value="1">Cycle 1 (Foundational Threats)</option>
+                            <option value="2">Cycle 2 (POPIA & Data Protection)</option>
+                            <option value="3">Cycle 3 (Advanced Threats)</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
-                        <label for="month_number">Month Number</label>
-                        <select id="month_number" name="month_number">
-                            <option value="">Any Month</option>
-                            <?php for($i = 1; $i <= 12; $i++): ?>
-                                <option value="<?php echo $i; ?>">Month <?php echo $i; ?></option>
-                            <?php endfor; ?>
+                        <label for="month_number">Quiz Month <span class="required">*</span></label>
+                        <select id="month_number" name="month_number" required>
+                            <option value="">Select Cycle First...</option>
                         </select>
                     </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label for="status">Quiz Status <span class="required">*</span></label>
+                        <select id="status" name="status" required>
+                            <option value="published">Published (Immediately Available)</option>
+                            <option value="draft">Draft (Not Visible to Employees)</option>
+                            <option value="scheduled">Scheduled (Will Auto-Publish)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="release_date">Release Date (for Scheduled Status)</label>
+                        <input type="date" id="release_date" name="release_date">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="requires_previous_completion" name="requires_previous_completion" value="1" checked>
+                        Require completion of previous quiz before accessing this one
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Uncheck only for the first quiz in a series. This ensures progressive learning.
+                    </small>
                 </div>
             </div>
             
@@ -354,16 +377,64 @@ $error = $_GET['error'] ?? '';
             });
         }
         
+        // Professional quiz scheduling functions
+        function updateMonthNumber() {
+            const cycleNumber = document.getElementById('cycle_number').value;
+            const monthSelect = document.getElementById('month_number');
+            
+            // Clear existing options
+            monthSelect.innerHTML = '';
+            
+            if (cycleNumber === '1') {
+                monthSelect.innerHTML = '<option value="4">Month 4 (End of Cycle 1)</option>';
+                monthSelect.value = '4';
+            } else if (cycleNumber === '2') {
+                monthSelect.innerHTML = '<option value="8">Month 8 (End of Cycle 2)</option>';
+                monthSelect.value = '8';
+            } else if (cycleNumber === '3') {
+                monthSelect.innerHTML = '<option value="12">Month 12 (End of Cycle 3)</option>';
+                monthSelect.value = '12';
+            } else {
+                monthSelect.innerHTML = '<option value="">Select Cycle First...</option>';
+            }
+            
+            // Update prerequisite checkbox based on cycle
+            const prerequisiteCheckbox = document.getElementById('requires_previous_completion');
+            if (cycleNumber === '1') {
+                prerequisiteCheckbox.checked = false;
+                prerequisiteCheckbox.disabled = true;
+            } else {
+                prerequisiteCheckbox.checked = true;
+                prerequisiteCheckbox.disabled = false;
+            }
+        }
+        
         // Add first question on page load
         document.addEventListener('DOMContentLoaded', function() {
             addQuestion();
         });
         
-        // Form validation
+        // Enhanced form validation
         document.getElementById('quizForm').addEventListener('submit', function(e) {
             if (questionCount === 0) {
                 e.preventDefault();
                 alert('Please add at least one question to the quiz.');
+                return false;
+            }
+            
+            // Validate release date for scheduled quizzes
+            const status = document.getElementById('status').value;
+            const releaseDate = document.getElementById('release_date').value;
+            
+            if (status === 'scheduled' && !releaseDate) {
+                e.preventDefault();
+                alert('Please set a release date for scheduled quizzes.');
+                return false;
+            }
+            
+            if (status === 'scheduled' && new Date(releaseDate) < new Date()) {
+                e.preventDefault();
+                alert('Release date cannot be in the past.');
                 return false;
             }
         });

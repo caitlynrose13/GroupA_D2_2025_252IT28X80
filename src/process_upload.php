@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
 $content_type = $_POST['content_type'] ?? '';
-$cycle_number = !empty($_POST['cycle_number']) ? (int)$_POST['cycle_number'] : null;
 $month_number = !empty($_POST['month_number']) ? (int)$_POST['month_number'] : null;
 
 // Validate required fields
@@ -76,20 +75,42 @@ if (!move_uploaded_file($file_tmp, $file_path)) {
 }
 
 try {
+    // Get content type ID from content_types table
+    $type_stmt = $pdo->prepare("SELECT id FROM content_types WHERE name = :type LIMIT 1");
+    $type_stmt->execute(['type' => $content_type]);
+    $content_type_row = $type_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$content_type_row) {
+        // If content type doesn't exist, create it
+        $insert_type = $pdo->prepare("INSERT INTO content_types (name, description) VALUES (:name, :description)");
+        $insert_type->execute([
+            'name' => $content_type,
+            'description' => ucfirst($content_type) . ' content'
+        ]);
+        $content_type_id = $pdo->lastInsertId();
+    } else {
+        $content_type_id = $content_type_row['id'];
+    }
+    
+    // Determine organization_id (NULL for global content, org ID for org-specific)
+    $organization_id = ($_SESSION['role'] === 'admin') ? null : $_SESSION['organization_id'];
+    
     // Insert into database
     $stmt = $pdo->prepare("
-        INSERT INTO content (title, description, file_path, file_type, content_type, cycle_number, month_number, is_active) 
-        VALUES (:title, :description, :file_path, :file_type, :content_type, :cycle_number, :month_number, 1)
+        INSERT INTO content (organization_id, title, description, file_path, file_name, file_size, content_type_id, month_number, uploaded_by, is_active) 
+        VALUES (:organization_id, :title, :description, :file_path, :file_name, :file_size, :content_type_id, :month_number, :uploaded_by, 1)
     ");
     
     $stmt->execute([
+        'organization_id' => $organization_id,
         'title' => $title,
         'description' => $description,
         'file_path' => 'uploads/' . $unique_name,
-        'file_type' => $file_ext,
-        'content_type' => $content_type,
-        'cycle_number' => $cycle_number,
-        'month_number' => $month_number
+        'file_name' => $file_name,
+        'file_size' => $file_size,
+        'content_type_id' => $content_type_id,
+        'month_number' => $month_number,
+        'uploaded_by' => $_SESSION['user_id']
     ]);
     
     header('Location: content_upload.php?success=' . urlencode('Content uploaded successfully!'));
@@ -99,7 +120,7 @@ try {
     // Delete uploaded file if database insert fails
     unlink($file_path);
     error_log("Content upload error: " . $e->getMessage());
-    header('Location: content_upload.php?error=' . urlencode('Database error. Please try again.'));
+    header('Location: content_upload.php?error=' . urlencode('Database error: ' . $e->getMessage()));
     exit();
 }
 ?>

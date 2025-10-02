@@ -2,6 +2,7 @@
 // filepath: src/take_quiz.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/quiz_helper.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -24,6 +25,16 @@ try {
     if (!$quiz) {
         header('Location: quiz_list.php?error=' . urlencode('Quiz not found'));
         exit();
+    }
+    
+    // Professional access control - only allow if user has permission (except for admins)
+    if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+        if (!canUserAccessQuiz($pdo, $_SESSION['user_id'], $quiz_id)) {
+            $prerequisite_msg = getPrerequisiteMessage($pdo, $_SESSION['user_id'], $quiz_id);
+            $error_msg = $prerequisite_msg ?: 'This quiz is not currently available to you.';
+            header('Location: quiz_list.php?error=' . urlencode($error_msg));
+            exit();
+        }
     }
     
     // Get quiz questions

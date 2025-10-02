@@ -24,11 +24,25 @@ $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
 $cycle_number = !empty($_POST['cycle_number']) ? (int)$_POST['cycle_number'] : null;
 $month_number = !empty($_POST['month_number']) ? (int)$_POST['month_number'] : null;
+$status = $_POST['status'] ?? 'published';
+$release_date = !empty($_POST['release_date']) ? $_POST['release_date'] : null;
+$requires_previous_completion = isset($_POST['requires_previous_completion']) ? 1 : 0;
 $questions = $_POST['questions'] ?? [];
 
 // Validate required fields
-if (empty($title) || empty($cycle_number) || empty($questions)) {
+if (empty($title) || empty($cycle_number) || empty($month_number) || empty($questions)) {
     header('Location: quiz_create.php?error=' . urlencode('Please fill in all required fields and add at least one question'));
+    exit();
+}
+
+// Validate scheduling logic
+if ($status === 'scheduled' && empty($release_date)) {
+    header('Location: quiz_create.php?error=' . urlencode('Scheduled quizzes must have a release date'));
+    exit();
+}
+
+if ($status === 'scheduled' && strtotime($release_date) < time()) {
+    header('Location: quiz_create.php?error=' . urlencode('Release date cannot be in the past'));
     exit();
 }
 
@@ -55,15 +69,18 @@ try {
     
     // Insert quiz
     $stmt = $pdo->prepare("
-        INSERT INTO quizzes (title, description, cycle_number, month_number, is_active, created_at) 
-        VALUES (:title, :description, :cycle_number, :month_number, 1, CURRENT_TIMESTAMP)
+        INSERT INTO quizzes (title, description, cycle_number, month_number, status, release_date, requires_previous_completion, is_active, created_at) 
+        VALUES (:title, :description, :cycle_number, :month_number, :status, :release_date, :requires_previous_completion, 1, CURRENT_TIMESTAMP)
     ");
     
     $stmt->execute([
         'title' => $title,
         'description' => $description,
         'cycle_number' => $cycle_number,
-        'month_number' => $month_number
+        'month_number' => $month_number,
+        'status' => $status,
+        'release_date' => $release_date,
+        'requires_previous_completion' => $requires_previous_completion
     ]);
     
     $quiz_id = $pdo->lastInsertId();

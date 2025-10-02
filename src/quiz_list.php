@@ -2,6 +2,7 @@
 // filepath: src/quiz_list.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/quiz_helper.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -352,20 +353,108 @@ $error = $_GET['error'] ?? $error ?? '';
                                     <span class="meta-badge month">Month <?php echo $quiz['month_number']; ?></span>
                                 <?php endif; ?>
                                 <span class="meta-badge"><?php echo $quiz['question_count']; ?> Questions</span>
+                                
+                                <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
+                                    <!-- Admin sees status information -->
+                                    <?php 
+                                    $status_color = [
+                                        'draft' => '#95a5a6',
+                                        'scheduled' => '#f39c12', 
+                                        'published' => '#27ae60'
+                                    ][$quiz['status']] ?? '#27ae60';
+                                    ?>
+                                    <span class="meta-badge" style="background: <?php echo $status_color; ?>; color: white;">
+                                        <?php echo ucfirst($quiz['status']); ?>
+                                    </span>
+                                    
+                                    <?php if ($quiz['status'] === 'scheduled' && $quiz['release_date']): ?>
+                                        <span class="meta-badge">Releases: <?php echo date('M j, Y', strtotime($quiz['release_date'])); ?></span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <!-- Employee sees access status -->
+                                    <?php 
+                                    $can_access = canUserAccessQuiz($pdo, $_SESSION['user_id'], $quiz['id']);
+                                    $has_completed = false;
+                                    $completion_info = null;
+                                    
+                                    if ($can_access) {
+                                        // Check if user has completed this quiz
+                                        $completion_stmt = $pdo->prepare("
+                                            SELECT score, percentage, passed, completed_at
+                                            FROM quiz_results 
+                                            WHERE user_id = :user_id AND quiz_id = :quiz_id
+                                            ORDER BY completed_at DESC
+                                            LIMIT 1
+                                        ");
+                                        $completion_stmt->execute([
+                                            'user_id' => $_SESSION['user_id'],
+                                            'quiz_id' => $quiz['id']
+                                        ]);
+                                        $completion_info = $completion_stmt->fetch(PDO::FETCH_ASSOC);
+                                        $has_completed = !empty($completion_info);
+                                    }
+                                    ?>
+                                    
+                                    <?php if ($can_access): ?>
+                                        <?php if ($has_completed): ?>
+                                            <span class="meta-badge" style="background: <?php echo $completion_info['passed'] ? '#27ae60' : '#e74c3c'; ?>; color: white;">
+                                                <?php echo $completion_info['passed'] ? 'Passed' : 'Failed'; ?> (<?php echo $completion_info['percentage']; ?>%)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="meta-badge" style="background: #3498db; color: white;">Available</span>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="meta-badge" style="background: #95a5a6; color: white;">Not Available</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </div>
+                            
                             <div class="quiz-stats">
-                                <span class="stat">📝 <?php echo $quiz['attempts_count']; ?> attempts</span>
+                                <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
+                                    <span class="stat">📝 <?php echo $quiz['attempts_count'] ?? 0; ?> attempts</span>
+                                <?php endif; ?>
                                 <span class="stat">🎯 <?php echo $quiz['passing_score']; ?>% to pass</span>
+                                
+                                <?php if ($quiz['requires_previous_completion']): ?>
+                                    <span class="stat">🔒 Prerequisites required</span>
+                                <?php endif; ?>
                             </div>
+                            
                             <?php if ($quiz['description']): ?>
                                 <div class="quiz-description"><?php echo htmlspecialchars($quiz['description']); ?></div>
                             <?php endif; ?>
                         </div>
+                        
                         <div class="quiz-actions">
-                            <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="take-quiz-btn">Take Quiz</a>
                             <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
-                                <a href="quiz_results.php?id=<?php echo $quiz['id']; ?>" class="view-btn">Results</a>
+                                <!-- Admin actions -->
+                                <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="take-quiz-btn">Preview Quiz</a>
+                                <a href="quiz_results.php?id=<?php echo $quiz['id']; ?>" class="view-btn">View Results</a>
                                 <a href="quiz_list.php?delete=<?php echo $quiz['id']; ?>" class="delete-btn" onclick="return confirm('Are you sure you want to delete this quiz? This will also delete all results.')">Delete</a>
+                            <?php else: ?>
+                                <!-- Employee actions -->
+                                <?php 
+                                $can_access = canUserAccessQuiz($pdo, $_SESSION['user_id'], $quiz['id']);
+                                $prerequisite_msg = getPrerequisiteMessage($pdo, $_SESSION['user_id'], $quiz['id']);
+                                ?>
+                                
+                                <?php if ($can_access): ?>
+                                    <?php if ($has_completed): ?>
+                                        <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="take-quiz-btn">Retake Quiz</a>
+                                        <a href="quiz_results.php?id=<?php echo $quiz['id']; ?>&user=<?php echo $_SESSION['user_id']; ?>" class="view-btn">View Results</a>
+                                    <?php else: ?>
+                                        <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="take-quiz-btn">Start Quiz</a>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <button class="take-quiz-btn" style="background: #95a5a6; cursor: not-allowed;" disabled>
+                                        Not Available
+                                    </button>
+                                    <?php if ($prerequisite_msg): ?>
+                                        <small style="color: #e74c3c; display: block; margin-top: 5px; font-size: 12px;">
+                                            <?php echo $prerequisite_msg; ?>
+                                        </small>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>

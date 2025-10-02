@@ -2,6 +2,7 @@
 // filepath: src/content_upload.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/program_structure.php';
 
 // Check if user is logged in and has upload permissions
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -163,22 +164,17 @@ $error = $_GET['error'] ?? '';
                 </div>
                 
                 <div class="form-group">
-                    <label for="cycle_number">Cycle Number</label>
-                    <select id="cycle_number" name="cycle_number">
-                        <option value="">Any Cycle</option>
-                        <option value="1">Cycle 1</option>
-                        <option value="2">Cycle 2</option>
-                        <option value="3">Cycle 3</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="month_number">Month Number</label>
+                    <label for="month_number">Program Month</label>
                     <select id="month_number" name="month_number">
-                        <option value="">Any Month</option>
-                        <?php for($i = 1; $i <= 12; $i++): ?>
-                            <option value="<?php echo $i; ?>">Month <?php echo $i; ?></option>
-                        <?php endfor; ?>
+                        <option value="">Select Month...</option>
+                        <?php 
+                        foreach (PROGRAM_MONTHS as $month_num => $month_info): 
+                        ?>
+                            <option value="<?php echo $month_num; ?>">
+                                Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
+                                (<?php echo htmlspecialchars($month_info['theme']); ?>)
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 
