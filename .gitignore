@@ -1,0 +1,40 @@
+# PHP
+vendor/
+composer.phar
+composer.lock
+*.log
+
+# Uploaded files - keep structure but ignore user uploads
+src/uploads/documents/*
+src/uploads/images/*
+!src/uploads/documents/.gitkeep
+!src/uploads/images/.gitkeep
+!src/uploads/documents/*.pdf
+!src/uploads/images/*.pdf
+
+# Database backups
+database/*.backup
+database/app.db.backup
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Environment files
+.env
+.env.local
+
+# Session files
+sessions/
