@@ -165,7 +165,9 @@ $error = $_GET['error'] ?? '';
             <div class="nav-links">
                 <a href="content_list.php">📚 Content</a>
                 <a href="quiz_list.php">📝 Quizzes</a>
+                <a href="progress.php">📊 Progress</a>
                 <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                    <a href="analytics.php">📈 Analytics</a>
                     <a href="content_upload.php">⬆️ Upload</a>
                 <?php endif; ?>
             </div>
@@ -234,7 +236,9 @@ $error = $_GET['error'] ?? '';
         <div class="quick-actions">
             <a href="content_list.php" class="action-btn">📚 Browse Content</a>
             <a href="quiz_list.php" class="action-btn">📝 Take Quizzes</a>
+            <a href="progress.php" class="action-btn">📊 View Progress</a>
             <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                <a href="analytics.php" class="action-btn">📈 View Analytics</a>
                 <a href="content_upload.php" class="action-btn">⬆️ Upload Content</a>
                 <a href="quiz_create.php" class="action-btn">➕ Create Quiz</a>
             <?php endif; ?>
