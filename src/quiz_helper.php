@@ -8,9 +8,10 @@
 function canUserAccessQuiz($pdo, $user_id, $quiz_id) {
     // Get quiz details
     $stmt = $pdo->prepare("
-        SELECT id, cycle_number, month_number, status, release_date, requires_previous_completion
-        FROM quizzes 
-        WHERE id = :quiz_id AND is_active = 1
+        SELECT q.id, q.month_number, q.release_date, q.requires_previous_completion, qs.name as status
+        FROM quizzes q
+        LEFT JOIN quiz_statuses qs ON q.status_id = qs.id
+        WHERE q.id = :quiz_id AND q.is_active = 1
     ");
     $stmt->execute(['quiz_id' => $quiz_id]);
     $quiz = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -33,7 +34,7 @@ function canUserAccessQuiz($pdo, $user_id, $quiz_id) {
     
     // Check prerequisites if required
     if ($quiz['requires_previous_completion']) {
-        return hasCompletedPrerequisites($pdo, $user_id, $quiz['cycle_number']);
+        return hasCompletedPrerequisites($pdo, $user_id, $quiz['month_number']);
     }
     
     return true; // All checks passed
@@ -42,25 +43,25 @@ function canUserAccessQuiz($pdo, $user_id, $quiz_id) {
 /**
  * Check if user has completed all prerequisite quizzes for a given cycle
  */
-function hasCompletedPrerequisites($pdo, $user_id, $current_cycle) {
-    // For cycle 1, no prerequisites needed
-    if ($current_cycle <= 1) {
+function hasCompletedPrerequisites($pdo, $user_id, $current_month) {
+    // For month 1, no prerequisites needed
+    if ($current_month <= 1) {
         return true;
     }
     
-    // Check if user has passed all previous cycles
-    for ($cycle = 1; $cycle < $current_cycle; $cycle++) {
+    // Check if user has passed all previous months
+    for ($month = 1; $month < $current_month; $month++) {
         $stmt = $pdo->prepare("
             SELECT qr.passed 
             FROM quiz_results qr
             JOIN quizzes q ON qr.quiz_id = q.id
-            WHERE qr.user_id = :user_id AND q.cycle_number = :cycle_number
+            WHERE qr.user_id = :user_id AND q.month_number = :month_number
             ORDER BY qr.completed_at DESC
             LIMIT 1
         ");
         $stmt->execute([
             'user_id' => $user_id,
-            'cycle_number' => $cycle
+            'month_number' => $month
         ]);
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -79,7 +80,7 @@ function hasCompletedPrerequisites($pdo, $user_id, $current_cycle) {
  */
 function getPrerequisiteMessage($pdo, $user_id, $quiz_id) {
     $stmt = $pdo->prepare("
-        SELECT cycle_number, requires_previous_completion
+        SELECT month_number, requires_previous_completion
         FROM quizzes 
         WHERE id = :quiz_id
     ");
@@ -90,29 +91,29 @@ function getPrerequisiteMessage($pdo, $user_id, $quiz_id) {
         return '';
     }
     
-    $missing_cycles = [];
-    for ($cycle = 1; $cycle < $quiz['cycle_number']; $cycle++) {
+    $missing_months = [];
+    for ($month = 1; $month < $quiz['month_number']; $month++) {
         $stmt = $pdo->prepare("
             SELECT qr.passed 
             FROM quiz_results qr
             JOIN quizzes q ON qr.quiz_id = q.id
-            WHERE qr.user_id = :user_id AND q.cycle_number = :cycle_number
+            WHERE qr.user_id = :user_id AND q.month_number = :month_number
             ORDER BY qr.completed_at DESC
             LIMIT 1
         ");
         $stmt->execute([
             'user_id' => $user_id,
-            'cycle_number' => $cycle
+            'month_number' => $month
         ]);
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$result || !$result['passed']) {
-            $missing_cycles[] = $cycle;
+            $missing_months[] = $month;
         }
     }
     
-    if (!empty($missing_cycles)) {
-        return "You must complete and pass Cycle " . implode(', ', $missing_cycles) . " quiz(s) first.";
+    if (!empty($missing_months)) {
+        return "You must complete and pass Month " . implode(', ', $missing_months) . " quiz(s) first.";
     }
     
     return '';

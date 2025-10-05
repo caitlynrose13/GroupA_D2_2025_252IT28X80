@@ -50,6 +50,8 @@ function updateEmployeeProgress($pdo, $user_id, $month_number) {
             $content_percent = ($content_completed / $content_total) * 70;
             $quiz_percent = $quiz_passed ? 30 : 0;
             $completion_percentage = $content_percent + $quiz_percent;
+        } elseif ($quiz_completed) {
+            $completion_percentage = $quiz_passed ? 100 : 0;
         }
         
         $stmt = $pdo->prepare("

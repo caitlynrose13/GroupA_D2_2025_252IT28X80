@@ -24,14 +24,13 @@ try {
         }
     }
     
-    $where_clause = $organization_id ? "WHERE organization_id = :org_id" : "";
+    $where_clause = $organization_id ? "organization_id = :org_id AND" : "";
     $params = $organization_id ? ['org_id' => $organization_id] : [];
     
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as total_employees
         FROM users
-        $where_clause
-        AND is_active = 1
+        WHERE $where_clause is_active = 1
         AND role_id = (SELECT id FROM roles WHERE name = 'employee')
     ");
     $stmt->execute($params);
@@ -47,14 +46,15 @@ try {
     $stmt->execute($params);
     $active_users = $stmt->fetchColumn();
     
+    $org_where = $organization_id ? "WHERE u.organization_id = :org_id" : "WHERE 1=1";
     $stmt = $pdo->prepare("
         SELECT 
             COUNT(DISTINCT qr.user_id) as users_with_attempts,
             SUM(CASE WHEN qr.passed = 1 THEN 1 ELSE 0 END) as total_passes
         FROM quiz_results qr
         JOIN users u ON qr.user_id = u.id
-        " . ($organization_id ? "WHERE u.organization_id = :org_id" : "")
-    );
+        $org_where
+    ");
     $stmt->execute($params);
     $quiz_stats = $stmt->fetch(PDO::FETCH_ASSOC);
     
