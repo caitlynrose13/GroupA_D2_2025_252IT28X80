@@ -219,10 +219,6 @@ try {
                 <div class="stat-number"><?php echo $overall_progress['months_with_content']; ?>/12</div>
                 <div class="stat-label">Months with Content Accessed</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-number"><?php echo $overall_progress['quizzes_passed']; ?>/3</div>
-                <div class="stat-label">Cycles Completed</div>
-            </div>
         </div>
 
         <?php foreach (PROGRAM_CYCLES as $cycle): ?>
