@@ -55,101 +55,141 @@ $error = $_GET['error'] ?? $error ?? '';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Management - SA SMME Cybersecurity Platform</title>
-    <!-- African-Inspired Styling -->
     <link rel="stylesheet" href="assets/webdesign-style.css">
 </head>
 <body>
-    <!-- African Pattern Border -->
+    <!-- Pattern Border -->
     <div class="african-border"></div>
     
     <div class="header">
-        <h1>👥 User Management</h1>
-        <div class="nav-links">
-            <a href="dashboard.php">🏠 Dashboard</a>
-            <a href="content_list.php">📚 Content</a>
-            <a href="quiz_list.php">📝 Quizzes</a>
-            <a href="logout.php">🚪 Logout</a>
+        <div class="header-left">
+            <h1>SA SMME Cybersecurity Platform</h1>
+        </div>
+        <div class="header-right">
+            <nav class="nav-links">
+                <a href="dashboard.php">Dashboard</a>
+                <a href="content_list.php">Content</a>
+                <a href="quiz_list.php">Quizzes</a>
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    <a href="organization_management.php">Organizations</a>
+                <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
+                    <a href="user_management.php">Users</a>
+                <?php endif; ?>
+            </nav>
+            <div class="user-section">
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
     </div>
 
     <div class="container">
+        <div class="page-header-section">
+            <div class="page-title-area">
+                <h2 class="page-title">User Management</h2>
+                <p class="page-subtitle">
+                    <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                        Manage users across all organizations
+                    <?php else: ?>
+                        Manage users in your organization
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Success/Error Messages -->
         <?php if ($success): ?>
-            <div class="message success"><?php echo htmlspecialchars($success); ?></div>
+            <div class="message success">
+                <?php echo htmlspecialchars(urldecode($success)); ?>
+            </div>
         <?php endif; ?>
         
         <?php if ($error): ?>
-            <div class="message error"><?php echo htmlspecialchars($error); ?></div>
+            <div class="message error">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
         <?php endif; ?>
 
-        <!-- Placeholder Notice -->
-        <div class="placeholder-notice">
-            <h3>🚧 User Management Interface</h3>
-            <p><strong>Status:</strong> Basic user listing implemented. Full CRUD operations can be added as needed.</p>
-            <p><strong>Current Functionality:</strong> View users based on your role permissions</p>
-            <p><strong>System Admin:</strong> Can see all users across all organizations</p>
-            <p><strong>Organization Admin:</strong> Can see users in their organization only</p>
+        <!-- User Management Info -->
+        <div class="info-card">
+            <h3>User Management Overview</h3>
+            <p><strong>Current Access Level:</strong> 
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    System Administrator - Full platform access
+                <?php else: ?>
+                    Organization Administrator - Organization-specific access
+                <?php endif; ?>
+            </p>
+            <div class="program-highlights">
+                <div class="highlight-item">
+                    <strong><?php echo count($users); ?></strong>
+                    <span>Total Users</span>
+                </div>
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    <div class="highlight-item">
+                        <strong><?php echo count(array_unique(array_column($users, 'organization_name'))); ?></strong>
+                        <span>Organizations</span>
+                    </div>
+                <?php endif; ?>
+                <div class="highlight-item">
+                    <strong><?php echo count(array_unique(array_column($users, 'role_name'))); ?></strong>
+                    <span>User Roles</span>
+                </div>
+            </div>
         </div>
 
-        <h3>
-            <?php if ($_SESSION['role'] === 'system_admin'): ?>
-                All Platform Users
+        <!-- Users Table -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 25px; color: var(--primary-dark); border-bottom: 2px solid var(--light-cream); padding-bottom: 10px;">
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    All Platform Users
+                <?php else: ?>
+                    Users in Your Organization
+                <?php endif; ?>
+            </h3>
+            
+            <?php if (empty($users)): ?>
+                <div class="info-card" style="text-align: center; padding: 40px;">
+                    <h3>No users found</h3>
+                    <p>There are currently no active users to display.</p>
+                </div>
             <?php else: ?>
-                Users in Your Organization
-            <?php endif; ?>
-        </h3>
-
-        <?php if (empty($users)): ?>
-            <div class="users-table">
-                <p style="padding: 20px; text-align: center; color: #666;">No users found.</p>
-            </div>
-        <?php else: ?>
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <?php if ($_SESSION['role'] === 'system_admin'): ?>
-                                <th>Organization</th>
-                            <?php endif; ?>
-                            <th>Department</th>
-                            <th>Last Login</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($users as $user): ?>
+                <div class="users-table">
+                    <table>
+                        <thead>
                             <tr>
-                                <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
-                                <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                <td>
-                                    <span class="role-badge role-<?php echo $user['role_name']; ?>">
-                                        <?php echo ucwords(str_replace('_', ' ', $user['role_name'])); ?>
-                                    </span>
-                                </td>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
                                 <?php if ($_SESSION['role'] === 'system_admin'): ?>
-                                    <td><?php echo htmlspecialchars($user['organization_name'] ?? 'System'); ?></td>
+                                    <th>Organization</th>
                                 <?php endif; ?>
-                                <td><?php echo htmlspecialchars($user['department'] ?? 'N/A'); ?></td>
-                                <td><?php echo $user['last_login'] ? date('M d, Y', strtotime($user['last_login'])) : 'Never'; ?></td>
+                                <th>Department</th>
+                                <th>Last Login</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-
-        <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h4>📊 User Statistics</h4>
-            <p><strong>Total Users:</strong> <?php echo count($users); ?></p>
-            <?php
-                $role_counts = array_count_values(array_column($users, 'role_name'));
-                foreach ($role_counts as $role => $count) {
-                    echo "<p><strong>" . ucwords(str_replace('_', ' ', $role)) . ":</strong> $count</p>";
-                }
-            ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($users as $user): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                    <td>
+                                        <span class="role-badge role-<?php echo $user['role_name']; ?>">
+                                            <?php echo ucwords(str_replace('_', ' ', $user['role_name'])); ?>
+                                        </span>
+                                    </td>
+                                    <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                                        <td><?php echo htmlspecialchars($user['organization_name'] ?? 'System'); ?></td>
+                                    <?php endif; ?>
+                                    <td><?php echo htmlspecialchars($user['department'] ?? 'N/A'); ?></td>
+                                    <td><?php echo $user['last_login'] ? date('M d, Y', strtotime($user['last_login'])) : 'Never'; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>

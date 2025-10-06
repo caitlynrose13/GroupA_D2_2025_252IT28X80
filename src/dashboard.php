@@ -128,7 +128,7 @@ $error = $_GET['error'] ?? '';
     
     <div class="header">
         <div class="header-left">
-            <h1>Cybersecurity Platform</h1>
+            <h1>SA SMME Cybersecurity Platform</h1>
         </div>
         <div class="header-right">
             <nav class="nav-links">
@@ -136,7 +136,6 @@ $error = $_GET['error'] ?? '';
                 <a href="quiz_list.php">Quizzes</a>
                 <?php if ($_SESSION['role'] === 'system_admin'): ?>
                     <a href="organization_management.php">Organizations</a>
-                    <a href="system_settings.php">Settings</a>
                 <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
                     <a href="user_management.php">Users</a>
                     <a href="reporting.php">Reports</a>
