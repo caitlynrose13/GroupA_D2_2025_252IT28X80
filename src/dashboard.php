@@ -134,12 +134,14 @@ $error = $_GET['error'] ?? '';
             <nav class="nav-links">
                 <a href="content_list.php">Content</a>
                 <a href="quiz_list.php">Quizzes</a>
-                <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    <a href="content_upload.php">Upload</a>
+                    <a href="organization_management.php">Organizations</a>
+                    <a href="system_settings.php">Settings</a>
+                <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
                     <a href="content_upload.php">Upload</a>
                     <a href="user_management.php">Users</a>
-                    <?php if ($_SESSION['role'] === 'system_admin'): ?>
-                        <a href="organization_management.php">Organizations</a>
-                    <?php endif; ?>
+                    <a href="reporting.php">Reports</a>
                 <?php endif; ?>
             </nav>
             <div class="user-section">
