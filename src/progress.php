@@ -212,25 +212,15 @@ try {
                 <div class="stat-label">Overall Progress</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number"><?php echo $overall_progress['quizzes_passed']; ?>/12</div>
-                <div class="stat-label">Quizzes Passed</div>
+                <div class="stat-number"><?php echo $overall_progress['quizzes_passed']; ?>/3</div>
+                <div class="stat-label">Cycle Quizzes Passed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number"><?php echo $overall_progress['months_started']; ?>/12</div>
-                <div class="stat-label">Months Started</div>
+                <div class="stat-number"><?php echo $overall_progress['months_with_content']; ?>/12</div>
+                <div class="stat-label">Months with Content Accessed</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">
-                    <?php 
-                    $cycles_completed = 0;
-                    foreach ($progress_data as $p) {
-                        if (in_array($p['month_number'], [4, 8, 12]) && $p['quiz_passed']) {
-                            $cycles_completed++;
-                        }
-                    }
-                    echo $cycles_completed;
-                    ?>/3
-                </div>
+                <div class="stat-number"><?php echo $overall_progress['quizzes_passed']; ?>/3</div>
                 <div class="stat-label">Cycles Completed</div>
             </div>
         </div>
@@ -274,33 +264,47 @@ try {
                             }
                         }
                         
-                        $completion = $month_progress ? $month_progress['completion_percentage'] : 0;
-                        $status = 'pending';
-                        if ($completion >= 100) {
-                            $status = 'complete';
-                        } elseif ($completion > 0) {
-                            $status = 'partial';
-                        }
+                        $is_assessment_month = in_array($month['month_number'], [4, 8, 12]);
+                        $content_completed = $month_progress ? $month_progress['content_completed'] : 0;
+                        $content_total = $month_progress ? $month_progress['content_total'] : 0;
+                        $has_accessed_content = $content_completed > 0;
                         ?>
                         <div class="month-card">
                             <div class="month-title">Month <?php echo $month['month_number']; ?>: <?php echo htmlspecialchars($month['title']); ?></div>
+                            <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">
+                                <?php echo htmlspecialchars($month['theme']); ?>
+                            </div>
                             
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: <?php echo $completion; ?>%;">
-                                    <?php if ($completion > 15): ?><?php echo round($completion); ?>%<?php endif; ?>
+                            <?php if (!$is_assessment_month): ?>
+                                <div style="margin: 10px 0;">
+                                    <div style="font-size: 13px; margin-bottom: 5px;">
+                                        📚 Content: <strong><?php echo $content_completed; ?>/<?php echo $content_total; ?></strong> items accessed
+                                    </div>
+                                    <?php if ($content_total == 0): ?>
+                                        <div style="font-size: 12px; color: #95a5a6;">No content available yet</div>
+                                    <?php elseif ($content_completed == 0): ?>
+                                        <div style="font-size: 12px; color: #e67e22;">⚠️ No content accessed</div>
+                                    <?php elseif ($content_completed < $content_total): ?>
+                                        <div style="font-size: 12px; color: #f39c12;">⏳ <?php echo $content_total - $content_completed; ?> items remaining</div>
+                                    <?php else: ?>
+                                        <div style="font-size: 12px; color: #2ecc71;">✓ All content accessed</div>
+                                    <?php endif; ?>
                                 </div>
-                            </div>
-                            
-                            <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                                <span class="status-badge status-<?php echo $status; ?>">
-                                    <?php echo ucfirst($status); ?>
-                                </span>
-                                <?php if ($month_progress && $month_progress['quiz_passed']): ?>
-                                    <span style="color: #2ecc71; font-weight: bold;">✓ Quiz Passed</span>
-                                <?php elseif ($month_progress && $month_progress['quiz_completed']): ?>
-                                    <span style="color: #e74c3c; font-weight: bold;">✗ Quiz Failed</span>
-                                <?php endif; ?>
-                            </div>
+                            <?php else: ?>
+                                <div style="margin: 10px 0; padding: 10px; background: #ecf0f1; border-radius: 4px;">
+                                    <div style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">
+                                        📝 Cycle <?php echo ceil($month['month_number'] / 4); ?> Assessment Quiz
+                                    </div>
+                                    <?php if ($month_progress && $month_progress['quiz_passed']): ?>
+                                        <div style="color: #2ecc71; font-weight: bold;">✓ Passed</div>
+                                    <?php elseif ($month_progress && $month_progress['quiz_completed']): ?>
+                                        <div style="color: #e74c3c; font-weight: bold;">✗ Not Passed Yet</div>
+                                        <div style="font-size: 12px; color: #7f8c8d;">Retake quiz to pass</div>
+                                    <?php else: ?>
+                                        <div style="color: #95a5a6;">Not attempted yet</div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>

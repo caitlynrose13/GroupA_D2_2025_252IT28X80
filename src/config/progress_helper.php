@@ -110,21 +110,40 @@ function getEmployeeProgress($pdo, $user_id, $month_number = null) {
 
 function getOverallProgress($pdo, $user_id) {
     try {
+        // Get overall completion across all 12 months
         $stmt = $pdo->prepare("
-            SELECT 
-                AVG(completion_percentage) as overall_percentage,
-                SUM(CASE WHEN quiz_passed = 1 THEN 1 ELSE 0 END) as quizzes_passed,
-                COUNT(DISTINCT month_number) as months_started
+            SELECT AVG(completion_percentage) as overall_percentage
             FROM employee_progress
             WHERE user_id = :user_id
         ");
         $stmt->execute(['user_id' => $user_id]);
         $progress = $stmt->fetch(PDO::FETCH_ASSOC);
         
+        // Count only actual quiz passes (months 4, 8, 12 - the cycle assessments)
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as quizzes_passed
+            FROM employee_progress
+            WHERE user_id = :user_id 
+            AND month_number IN (4, 8, 12)
+            AND quiz_passed = 1
+        ");
+        $stmt->execute(['user_id' => $user_id]);
+        $quiz_count = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Count content accessed per month
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT month_number) as months_with_content
+            FROM employee_progress
+            WHERE user_id = :user_id 
+            AND content_completed > 0
+        ");
+        $stmt->execute(['user_id' => $user_id]);
+        $content_access = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         return [
             'overall_percentage' => round($progress['overall_percentage'] ?? 0, 2),
-            'quizzes_passed' => $progress['quizzes_passed'] ?? 0,
-            'months_started' => $progress['months_started'] ?? 0
+            'quizzes_passed' => $quiz_count['quizzes_passed'] ?? 0,
+            'months_with_content' => $content_access['months_with_content'] ?? 0
         ];
     } catch (PDOException $e) {
         error_log("Overall progress error: " . $e->getMessage());
