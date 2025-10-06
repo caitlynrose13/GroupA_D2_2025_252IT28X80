@@ -165,6 +165,11 @@ None configured yet.
 - Updated prerequisite error message to be user-friendly: "You must complete and pass the [Cycle Title] assessment quiz (Month X) first"
 - Added 36 real quiz questions across all 3 cycle assessments with proper explanations
 - Cleaned up database by removing all dummy test data
+- Removed organization-specific quizzes (TechCorp, SafeGuard, DataSecure) - only 3 cycle assessment quizzes remain
+- Fixed progress page to show accurate quiz counts (1/3 instead of 1/12)
+- Removed "Months Started" stat from progress page
+- Redesigned progress page to show content access per month and quiz status for cycle assessments
+- Added clear indicators for work remaining (content items to access, quizzes to complete)
 
 **October 4, 2025:**
 - Imported project from GitHub
