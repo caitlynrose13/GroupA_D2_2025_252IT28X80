@@ -45,15 +45,15 @@ $filter_type = $_GET['type'] ?? '';
 $filter_month = $_GET['month'] ?? '';
 
 // Build query with filters
-$where_conditions = ['is_active = 1'];
+$where_conditions = ['c.is_active = 1'];
 $params = [];
 
 if (!empty($filter_type)) {
-    $where_conditions[] = 'content_type = :type';
+    $where_conditions[] = 'ct.name = :type';
     $params['type'] = $filter_type;
 }
 if (!empty($filter_month)) {
-    $where_conditions[] = 'month_number = :month';
+    $where_conditions[] = 'c.month_number = :month';
     $params['month'] = $filter_month;
 }
 
@@ -61,9 +61,11 @@ $where_clause = implode(' AND ', $where_conditions);
 
 try {
     $stmt = $pdo->prepare("
-        SELECT * FROM content 
+        SELECT c.*, ct.name as content_type
+        FROM content c
+        LEFT JOIN content_types ct ON c.content_type_id = ct.id
         WHERE $where_clause 
-        ORDER BY created_at DESC
+        ORDER BY c.created_at DESC
     ");
     $stmt->execute($params);
     $content_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -309,7 +311,7 @@ $error = $_GET['error'] ?? $error ?? '';
                         <div class="content-header">
                             <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>
                             <div class="content-meta">
-                                <span class="meta-badge"><?php echo ucfirst($content['content_type']); ?></span>
+                                <span class="meta-badge"><?php echo ucfirst($content['content_type'] ?? 'content'); ?></span>
                                 <?php if ($content['cycle_number']): ?>
                                     <span class="meta-badge">Cycle <?php echo $content['cycle_number']; ?></span>
                                 <?php endif; ?>
