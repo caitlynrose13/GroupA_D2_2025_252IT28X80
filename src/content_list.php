@@ -118,71 +118,87 @@ $error = $_GET['error'] ?? $error ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Library - South African SMME Cybersecurity Portal</title>
+    <title>Content Library - SA SMME Cybersecurity Platform</title>
     <link rel="stylesheet" href="assets/webdesign-style.css">
 </head>
 <body>
-    <div class="african-header">
-        <div class="african-border"></div>
-        <div class="african-header-content">
-            <h1>📚 Content Library</h1>
-            <p>Cybersecurity training materials for South African SMMEs</p>
+    <!-- Pattern Border -->
+    <div class="african-border"></div>
+    
+    <div class="header">
+        <div class="header-left">
+            <h1>SA SMME Cybersecurity Platform</h1>
         </div>
-        <div class="african-nav-links">
-            <a href="dashboard.php">Dashboard</a>
-            <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
-                <a href="content_upload.php">Upload Content</a>
-            <?php endif; ?>
-            <a href="quiz_list.php">Quiz Library</a>
-            <a href="logout.php">Logout</a>
+        <div class="header-right">
+            <nav class="nav-links">
+                <a href="dashboard.php">Dashboard</a>
+                <a href="content_list.php">Content</a>
+                <a href="quiz_list.php">Quizzes</a>
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    <a href="content_upload.php">Upload</a>
+                    <a href="organization_management.php">Organizations</a>
+                <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
+                    <a href="content_upload.php">Upload</a>
+                    <a href="user_management.php">Users</a>
+                <?php endif; ?>
+            </nav>
+            <div class="user-section">
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
     </div>
     
-    <div class="african-container">
+    <div class="container">
+        <div class="page-header">
+            <h2>Content Library</h2>
+            <p>Cybersecurity training materials for South African SMMEs</p>
+        </div>
+        
         <!-- Success/Error Messages -->
         <?php if ($success): ?>
-            <div class="african-success-message">
+            <div class="message success">
                 <?php echo htmlspecialchars(urldecode($success)); ?>
             </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="african-error-message">
+            <div class="message error">
                 <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
 
         <!-- Filters -->
-        <div class="african-card african-filters">
-            <h3 style="margin-bottom: 20px; color: var(--primary-dark);">🔍 Filter Content</h3>
+        <div class="form-card" style="margin-bottom: 30px;">
+            <h3 style="margin-bottom: 20px; color: var(--primary-dark);">Filter Content</h3>
             <form method="GET" action="">
-                <div class="african-filter-row">
-                    <div class="african-filter-group">
+                <div class="form-row">
+                    <div class="form-group half-width">
                         <label for="type">Content Type</label>
-                        <select id="type" name="type" class="african-select">
+                        <select id="type" name="type">
                             <option value="">All Types</option>
                             <?php foreach ($available_types as $type): ?>
                                 <option value="<?php echo htmlspecialchars($type); ?>" 
                                         <?php echo $filter_type === $type ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($type); ?>
+                                    <?php echo htmlspecialchars(ucfirst($type)); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="african-filter-group">
+                    <div class="form-group half-width">
                         <label for="month">Program Month</label>
-                        <select id="month" name="month" class="african-select">
+                        <select id="month" name="month">
                             <option value="">All Months</option>
-                            <?php for($i = 1; $i <= 12; $i++): ?>
-                                <option value="<?php echo $i; ?>" <?php echo $filter_month === (string)$i ? 'selected' : ''; ?>>
-                                    Month <?php echo $i; ?> - <?php echo PROGRAM_STRUCTURE[$i]['theme']; ?>
+                            <?php foreach (PROGRAM_MONTHS as $month_num => $month_info): ?>
+                                <option value="<?php echo $month_num; ?>" <?php echo $filter_month === (string)$month_num ? 'selected' : ''; ?>>
+                                    Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
                                 </option>
-                            <?php endfor; ?>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="african-filter-actions">
-                        <button type="submit" class="african-btn african-btn-primary">🔍 Filter</button>
-                        <a href="content_list.php" class="african-btn african-btn-secondary">🗑️ Clear</a>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Apply Filters</button>
+                    <a href="content_list.php" class="btn-secondary">Clear Filters</a>
                     </div>
                 </div>
             </form>
@@ -190,76 +206,78 @@ $error = $_GET['error'] ?? $error ?? '';
 
         <!-- Content Grid -->
         <?php if (empty($content_list)): ?>
-            <div class="african-empty-state">
-                <h3>📂 No content found</h3>
+            <div class="info-card" style="text-align: center; padding: 40px;">
+                <h3>No content found</h3>
                 <p>Try adjusting your filters or upload some content to get started.</p>
                 <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
-                    <p><a href="content_upload.php" class="african-link">📤 Upload your first content</a></p>
+                    <div style="margin-top: 20px;">
+                        <a href="content_upload.php" class="btn-primary">Upload your first content</a>
+                    </div>
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="african-content-grid">
+            <div class="content-grid">
                 <?php foreach ($content_list as $content): ?>
-                    <div class="african-card african-content-card">
-                        <div class="african-content-header">
-                            <h3 class="african-content-title"><?php echo htmlspecialchars($content['title']); ?></h3>
-                            <div class="african-content-meta">
-                                <span class="african-badge african-badge-type">
+                    <div class="content-card">
+                        <div class="content-header">
+                            <h3><?php echo htmlspecialchars($content['title']); ?></h3>
+                            <div class="content-badges">
+                                <span class="badge badge-type">
                                     <?php echo htmlspecialchars($content['content_type_name']); ?>
                                 </span>
                                 <?php if ($content['month_number']): ?>
-                                    <span class="african-badge african-badge-month">
+                                    <span class="badge badge-month">
                                         Month <?php echo $content['month_number']; ?>
                                     </span>
                                 <?php endif; ?>
                                 <?php if ($content['organization_name']): ?>
-                                    <span class="african-badge african-badge-org">
+                                    <span class="badge badge-org">
                                         <?php echo htmlspecialchars($content['organization_name']); ?>
                                     </span>
                                 <?php else: ?>
-                                    <span class="african-badge african-badge-global">Global</span>
+                                    <span class="badge badge-global">Global</span>
                                 <?php endif; ?>
                             </div>
                             
                             <?php if ($content['description']): ?>
-                                <p class="african-content-description">
+                                <p class="content-description">
                                     <?php echo htmlspecialchars($content['description']); ?>
                                 </p>
                             <?php endif; ?>
                             
-                            <div class="african-content-stats">
+                            <div class="content-meta">
                                 <?php if ($content['file_size']): ?>
-                                    <span class="african-stat">📊 <?php echo number_format($content['file_size'] / 1024, 1); ?> KB</span>
+                                    <span><?php echo number_format($content['file_size'] / 1024, 1); ?> KB</span>
                                 <?php endif; ?>
-                                <span class="african-stat">📅 <?php echo date('M j, Y', strtotime($content['created_at'])); ?></span>
+                                <span><?php echo date('M j, Y', strtotime($content['created_at'])); ?></span>
                                 <?php if ($content['uploaded_by_name']): ?>
-                                    <span class="african-stat">👤 <?php echo htmlspecialchars($content['uploaded_by_name']); ?></span>
+                                    <span>by <?php echo htmlspecialchars($content['uploaded_by_name']); ?></span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         
-                        <div class="african-content-actions">
+                        <div class="content-actions">
                             <?php if ($content['external_url']): ?>
                                 <a href="<?php echo htmlspecialchars($content['external_url']); ?>" 
-                                   target="_blank" class="african-btn african-btn-primary">
-                                    🌐 Open Link
+                                   target="_blank" class="btn-primary">
+                                    Open Link
                                 </a>
                             <?php elseif ($content['file_path']): ?>
                                 <a href="view_content.php?id=<?php echo $content['id']; ?>" 
-                                   class="african-btn african-btn-primary">
-                                    👁️ View
+                                   class="btn-primary">
+                                    View
                                 </a>
                                 <a href="download_content.php?id=<?php echo $content['id']; ?>" 
-                                   class="african-btn african-btn-secondary">
-                                    📥 Download
+                                   class="btn-secondary">
+                                    Download
                                 </a>
                             <?php endif; ?>
                             
                             <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
                                 <a href="content_list.php?delete=<?php echo $content['id']; ?>" 
-                                   class="african-btn african-btn-danger" 
+                                   class="btn-danger" 
                                    onclick="return confirm('Are you sure you want to delete this content?')">
-                                    🗑️ Delete
+                                    Delete
                                 </a>
                             <?php endif; ?>
                         </div>

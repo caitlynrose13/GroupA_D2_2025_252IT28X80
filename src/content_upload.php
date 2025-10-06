@@ -23,167 +23,128 @@ $error = $_GET['error'] ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Content - South African SMME Cybersecurity Portal</title>
+    <title>Upload Content - Cybersecurity Platform</title>
     <link rel="stylesheet" href="assets/webdesign-style.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background: #f5f7fa;
-        }
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { margin: 0; font-size: 24px; }
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .nav-links a:hover { background: rgba(255,255,255,0.1); }
-        .container {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-        .form-card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .upload-btn {
-            background: #27ae60;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-        }
-        .upload-btn:hover { background: #219a52; }
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid #28a745;
-        }
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid #dc3545;
-        }
-        .required { color: #e74c3c; }
-    </style>
 </head>
 <body>
-    <div class="african-header">
-        <div class="african-border"></div>
-        <div class="african-header-content">
-            <h1>📤 Upload Content</h1>
-            <p>Share cybersecurity training materials</p>
+    <!-- Pattern Border -->
+    <div class="african-border"></div>
+    
+    <div class="header">
+        <div class="header-left">
+            <h1>Cybersecurity Platform</h1>
         </div>
-        <div class="african-nav-links">
-            <a href="dashboard.php">Dashboard</a>
-            <a href="content_list.php">View Content</a>
-            <a href="logout.php">Logout</a>
+        <div class="header-right">
+            <nav class="nav-links">
+                <a href="dashboard.php">Dashboard</a>
+                <a href="content_list.php">Content</a>
+                <a href="quiz_list.php">Quizzes</a>
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                    <a href="organization_management.php">Organizations</a>
+                <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
+                    <a href="user_management.php">Users</a>
+                <?php endif; ?>
+            </nav>
+            <div class="user-section">
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
     </div>
-    
-    <div class="african-container">
-        <div class="african-card">
-            <h2>Upload New Content</h2>
-            
-            <?php if ($success): ?>
-                <div class="success-message">
-                    <?php echo htmlspecialchars(urldecode($success)); ?>
-                </div>
-            <?php endif; ?>
-            
-            <?php if ($error): ?>
-                <div class="error-message">
-                    <?php echo htmlspecialchars(urldecode($error)); ?>
-                </div>
-            <?php endif; ?>
-            
+
+    <div class="container">
+        <div class="page-header">
+            <h2>Upload Content</h2>
+            <p>Share cybersecurity training materials with your <?php echo $_SESSION['role'] === 'system_admin' ? 'platform' : 'organization'; ?></p>
+        </div>
+        
+        <?php if ($success): ?>
+            <div class="message success">
+                <?php echo htmlspecialchars(urldecode($success)); ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($error): ?>
+            <div class="message error">
+                <?php echo htmlspecialchars(urldecode($error)); ?>
+            </div>
+        <?php endif; ?>
+        
+        <div class="form-card">
             <form method="POST" action="process_upload.php" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="title">Content Title <span class="required">*</span></label>
-                    <input type="text" id="title" name="title" required maxlength="255">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="title">Content Title <span class="required">*</span></label>
+                        <input type="text" id="title" name="title" required maxlength="255" placeholder="Enter content title">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" rows="4" placeholder="Brief description of the content..."></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" name="description" rows="4" placeholder="Brief description of the content..."></textarea>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="file">Upload File <span class="required">*</span></label>
-                    <input type="file" id="file" name="file" required accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi">
-                    <small>Supported: PDF, Word, PowerPoint, Images, Videos (Max: 10MB)</small>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="file">Upload File <span class="required">*</span></label>
+                        <input type="file" id="file" name="file" required accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mov,.avi">
+                        <small class="form-help">Supported: PDF, Word, PowerPoint, Images, Videos (Max: 10MB)</small>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="content_type">Content Type <span class="required">*</span></label>
-                    <select id="content_type" name="content_type" required>
-                        <option value="">Select Type...</option>
-                        <option value="document">Document</option>
-                        <option value="image">Image</option>
-                        <option value="video">Video</option>
-                        <option value="misc">Miscellaneous</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group half-width">
+                        <label for="content_type">Content Type <span class="required">*</span></label>
+                        <select id="content_type" name="content_type" required>
+                            <option value="">Select Type...</option>
+                            <option value="document">Document</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                            <option value="misc">Miscellaneous</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group half-width">
+                        <label for="month_number">Program Month</label>
+                        <select id="month_number" name="month_number">
+                            <option value="">Select Month...</option>
+                            <?php 
+                            foreach (PROGRAM_MONTHS as $month_num => $month_info): 
+                            ?>
+                                <option value="<?php echo $month_num; ?>">
+                                    Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-help">Leave blank for general content</small>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="month_number">Program Month</label>
-                    <select id="month_number" name="month_number">
-                        <option value="">Select Month...</option>
-                        <?php 
-                        foreach (PROGRAM_MONTHS as $month_num => $month_info): 
-                        ?>
-                            <option value="<?php echo $month_num; ?>">
-                                Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
-                                (<?php echo htmlspecialchars($month_info['theme']); ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+
+                <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                <div class="form-row">
+                    <div class="admin-info">
+                        <div class="info-badge">
+                            <strong>System Administrator Upload</strong>
+                            <p>This content will be available to all organizations on the platform</p>
+                        </div>
+                    </div>
                 </div>
+                <?php else: ?>
+                <div class="form-row">
+                    <div class="admin-info">
+                        <div class="info-badge org-admin">
+                            <strong>Organization Upload</strong>
+                            <p>This content will be available only to your organization</p>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
-                <button type="submit" class="upload-btn">Upload Content</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Upload Content</button>
+                    <a href="content_list.php" class="btn-secondary">Cancel</a>
+                </div>
             </form>
         </div>
     </div>
