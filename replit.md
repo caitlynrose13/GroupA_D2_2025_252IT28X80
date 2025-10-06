@@ -158,6 +158,14 @@ None configured yet.
 
 ## Recent Changes
 
+**October 6, 2025:**
+- Fixed true/false quiz question grading bug using case-insensitive comparison
+- Enhanced quiz results page to show explanations for ALL questions (both correct and incorrect)
+- Fixed prerequisite validation logic - now checks only previous cycle's assessment quiz instead of all previous months
+- Updated prerequisite error message to be user-friendly: "You must complete and pass the [Cycle Title] assessment quiz (Month X) first"
+- Added 36 real quiz questions across all 3 cycle assessments with proper explanations
+- Cleaned up database by removing all dummy test data
+
 **October 4, 2025:**
 - Imported project from GitHub
 - Set up Replit environment with PHP and SQLite
