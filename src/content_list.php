@@ -135,10 +135,8 @@ $error = $_GET['error'] ?? $error ?? '';
                 <a href="content_list.php">Content</a>
                 <a href="quiz_list.php">Quizzes</a>
                 <?php if ($_SESSION['role'] === 'system_admin'): ?>
-                    <a href="content_upload.php">Upload</a>
                     <a href="organization_management.php">Organizations</a>
                 <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
-                    <a href="content_upload.php">Upload</a>
                     <a href="user_management.php">Users</a>
                 <?php endif; ?>
             </nav>
@@ -149,9 +147,19 @@ $error = $_GET['error'] ?? $error ?? '';
     </div>
     
     <div class="container">
-        <div class="page-header">
-            <h2>Content Library</h2>
-            <p>Cybersecurity training materials for South African SMMEs</p>
+        <div class="page-header-section">
+            <div class="page-title-area">
+                <h2 class="page-title">Content Library</h2>
+                <p class="page-subtitle">Cybersecurity training materials for South African SMMEs</p>
+            </div>
+            <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                <div class="page-actions">
+                    <a href="content_upload.php" class="btn-primary create-quiz-btn">
+                        <span class="btn-icon">📤</span>
+                        <span class="btn-text">Upload Content</span>
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
         
         <!-- Success/Error Messages -->
