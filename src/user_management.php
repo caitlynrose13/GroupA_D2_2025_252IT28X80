@@ -15,6 +15,7 @@ if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
 }
 
 // Get users based on role
+$pending_approvals = [];
 try {
     if ($_SESSION['role'] === 'system_admin') {
         // System admin can see all users
@@ -27,6 +28,19 @@ try {
             ORDER BY u.organization_id, u.role_id, u.last_name
         ");
         $stmt->execute();
+        
+        // Also get pending approvals for organization admins
+        $pending_stmt = $pdo->prepare("
+            SELECT u.*, r.name as role_name, o.name as organization_name, es.name as status_name
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id 
+            LEFT JOIN organizations o ON u.organization_id = o.id 
+            LEFT JOIN employee_statuses es ON u.status_id = es.id
+            WHERE u.is_active = 1 AND es.name = 'pending_approval' AND r.name = 'org_admin'
+            ORDER BY u.created_at DESC
+        ");
+        $pending_stmt->execute();
+        $pending_approvals = $pending_stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
         // Org admin can only see users in their organization
         $stmt = $pdo->prepare("
@@ -94,6 +108,13 @@ $error = $_GET['error'] ?? $error ?? '';
                     <?php endif; ?>
                 </p>
             </div>
+            <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                <div class="page-actions">
+                    <a href="create_org_admin.php" class="btn btn-primary">
+                        👤 Create Organization Admin
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
         
         <!-- Success/Error Messages -->
@@ -129,6 +150,10 @@ $error = $_GET['error'] ?? $error ?? '';
                         <strong><?php echo count(array_unique(array_column($users, 'organization_name'))); ?></strong>
                         <span>Organizations</span>
                     </div>
+                    <div class="highlight-item">
+                        <strong><?php echo count($pending_approvals); ?></strong>
+                        <span>Pending Approvals</span>
+                    </div>
                 <?php endif; ?>
                 <div class="highlight-item">
                     <strong><?php echo count(array_unique(array_column($users, 'role_name'))); ?></strong>
@@ -136,6 +161,52 @@ $error = $_GET['error'] ?? $error ?? '';
                 </div>
             </div>
         </div>
+
+        <!-- Pending Approvals Section (System Admin Only) -->
+        <?php if ($_SESSION['role'] === 'system_admin' && !empty($pending_approvals)): ?>
+            <div class="form-card" style="border-left: 4px solid var(--warning-color); background: #fff8e1;">
+                <h3 style="margin-bottom: 25px; color: var(--warning-color); border-bottom: 2px solid var(--warning-color); padding-bottom: 10px;">
+                    ⚠️ Pending Organization Admin Approvals
+                </h3>
+                <div class="approvals-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Organization</th>
+                                <th>Applied Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pending_approvals as $pending): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($pending['first_name'] . ' ' . $pending['last_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($pending['email']); ?></td>
+                                    <td><?php echo htmlspecialchars($pending['organization_name'] ?? 'Unknown'); ?></td>
+                                    <td><?php echo date('M d, Y', strtotime($pending['created_at'])); ?></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <a href="approve_user.php?user_id=<?php echo $pending['id']; ?>&action=approve" 
+                                               class="btn btn-success btn-sm"
+                                               onclick="return confirm('Approve this organization admin account?')">
+                                                ✅ Approve
+                                            </a>
+                                            <a href="approve_user.php?user_id=<?php echo $pending['id']; ?>&action=reject" 
+                                               class="btn btn-danger btn-sm"
+                                               onclick="return confirm('Reject this organization admin account? This will deactivate the account.')">
+                                                ❌ Reject
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Users Table -->
         <div class="form-card">

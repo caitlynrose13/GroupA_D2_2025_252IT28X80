@@ -403,6 +403,7 @@ INSERT INTO quiz_statuses (name, description) VALUES
 -- Insert employee statuses
 INSERT INTO employee_statuses (name, description) VALUES 
 ('active', 'Active employee with full access'),
+('pending_approval', 'Organization admin account pending system admin approval'),
 ('inactive', 'Temporarily inactive employee'),
 ('terminated', 'Former employee with revoked access'),
 ('on_leave', 'Employee on leave with limited access');
