@@ -11,14 +11,36 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 }
 
 // Handle delete action (admin/org_admin only)
-if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     $delete_id = $_GET['delete'];
     
     try {
+        // Security check: ensure user can only delete quizzes they have access to
+        if ($_SESSION['role'] === 'system_admin') {
+            $security_where = '1=1';
+            $security_params = ['id' => $delete_id];
+        } else {
+            $security_where = '(organization_id IS NULL OR organization_id = :org_id)';
+            $security_params = ['id' => $delete_id, 'org_id' => $_SESSION['organization_id']];
+        }
+        
+        // Check if quiz exists and user has access
+        $check_stmt = $pdo->prepare("SELECT id FROM quizzes WHERE id = :id AND $security_where LIMIT 1");
+        $check_stmt->execute($security_params);
+        
+        if (!$check_stmt->fetch()) {
+            header('Location: quiz_list.php?error=' . urlencode('Quiz not found or access denied'));
+            exit();
+        }
+        
         // Start transaction
         $pdo->beginTransaction();
         
-        // Delete quiz questions first (due to foreign key constraint)
+        // Delete quiz question answers first
+        $stmt = $pdo->prepare("DELETE FROM quiz_question_answers WHERE question_id IN (SELECT id FROM quiz_questions WHERE quiz_id = :id)");
+        $stmt->execute(['id' => $delete_id]);
+        
+        // Delete quiz questions
         $stmt = $pdo->prepare("DELETE FROM quiz_questions WHERE quiz_id = :id");
         $stmt->execute(['id' => $delete_id]);
         
@@ -26,9 +48,13 @@ if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin']
         $stmt = $pdo->prepare("DELETE FROM quiz_results WHERE quiz_id = :id");
         $stmt->execute(['id' => $delete_id]);
         
-        // Delete quiz
-        $stmt = $pdo->prepare("DELETE FROM quizzes WHERE id = :id");
+        // Delete quiz attempts
+        $stmt = $pdo->prepare("DELETE FROM quiz_attempts WHERE quiz_id = :id");
         $stmt->execute(['id' => $delete_id]);
+        
+        // Delete quiz
+        $stmt = $pdo->prepare("DELETE FROM quizzes WHERE id = :id AND $security_where");
+        $stmt->execute($security_params);
         
         $pdo->commit();
         header('Location: quiz_list.php?success=' . urlencode('Quiz deleted successfully'));
@@ -44,14 +70,20 @@ if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin']
 $filter_cycle = $_GET['cycle'] ?? '';
 $filter_month = $_GET['month'] ?? '';
 
-// Build query with filters
+// Build query with filters and multi-tenant security
 $where_conditions = ['q.is_active = 1'];
 $params = [];
 
-if (!empty($filter_cycle)) {
-    $where_conditions[] = 'q.cycle_number = :cycle';
-    $params['cycle'] = $filter_cycle;
+// Multi-tenant security
+if ($_SESSION['role'] === 'system_admin') {
+    // System admin can see all quizzes
+} else {
+    // Regular users can only see global quizzes + their organization's quizzes
+    $where_conditions[] = '(q.organization_id IS NULL OR q.organization_id = :org_id)';
+    $params['org_id'] = $_SESSION['organization_id'];
 }
+
+// Add filters
 if (!empty($filter_month)) {
     $where_conditions[] = 'q.month_number = :month';
     $params['month'] = $filter_month;
@@ -60,17 +92,21 @@ if (!empty($filter_month)) {
 $where_clause = implode(' AND ', $where_conditions);
 
 try {
-    // Get quizzes with question count
+    // Get quizzes with question count and organization info
     $stmt = $pdo->prepare("
         SELECT q.*, 
                COUNT(qq.id) as question_count,
-               COUNT(DISTINCT qr.user_id) as attempts_count
+               COUNT(DISTINCT qr.user_id) as attempts_count,
+               o.name as organization_name,
+               qs.name as status_name
         FROM quizzes q 
         LEFT JOIN quiz_questions qq ON q.id = qq.quiz_id
         LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
+        LEFT JOIN organizations o ON q.organization_id = o.id
+        LEFT JOIN quiz_statuses qs ON q.status_id = qs.id
         WHERE $where_clause 
         GROUP BY q.id
-        ORDER BY q.created_at DESC
+        ORDER BY q.month_number ASC, q.created_at DESC
     ");
     $stmt->execute($params);
     $quiz_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -87,12 +123,13 @@ $error = $_GET['error'] ?? $error ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Library - Cybersecurity Awareness</title>
+    <title>Quiz Library - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            background: #f5f7fa;
+            background: var(--light-cream);
         }
         .header {
             background: #2c3e50;
@@ -276,9 +313,13 @@ $error = $_GET['error'] ?? $error ?? '';
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Quiz Library</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>🎯 Quiz Library</h1>
+            <p>Test your cybersecurity knowledge</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
                 <a href="quiz_create.php">Create Quiz</a>
@@ -288,7 +329,7 @@ $error = $_GET['error'] ?? $error ?? '';
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <!-- Success/Error Messages -->
         <?php if ($success): ?>
             <div class="success-message">
@@ -303,7 +344,7 @@ $error = $_GET['error'] ?? $error ?? '';
         <?php endif; ?>
 
         <!-- Filters -->
-        <div class="filters">
+        <div class="african-card african-filters">
             <form method="GET" action="">
                 <div class="filter-row">
                     <div class="filter-group">
@@ -348,7 +389,6 @@ $error = $_GET['error'] ?? $error ?? '';
                         <div class="quiz-header">
                             <div class="quiz-title"><?php echo htmlspecialchars($quiz['title']); ?></div>
                             <div class="quiz-meta">
-                                <span class="meta-badge cycle">Cycle <?php echo $quiz['cycle_number']; ?></span>
                                 <?php if ($quiz['month_number']): ?>
                                     <span class="meta-badge month">Month <?php echo $quiz['month_number']; ?></span>
                                 <?php endif; ?>

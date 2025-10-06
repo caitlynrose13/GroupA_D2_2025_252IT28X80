@@ -10,7 +10,7 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit();
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     header('Location: dashboard.php?error=' . urlencode('Access denied. Upload permission required.'));
     exit();
 }
@@ -23,7 +23,8 @@ $error = $_GET['error'] ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Content - Cybersecurity Awareness</title>
+    <title>Upload Content - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -110,17 +111,21 @@ $error = $_GET['error'] ?? '';
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Upload Content</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>📤 Upload Content</h1>
+            <p>Share cybersecurity training materials</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <a href="content_list.php">View Content</a>
             <a href="logout.php">Logout</a>
         </div>
     </div>
     
-    <div class="container">
-        <div class="form-card">
+    <div class="african-container">
+        <div class="african-card">
             <h2>Upload New Content</h2>
             
             <?php if ($success): ?>

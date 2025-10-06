@@ -17,18 +17,31 @@ if (empty($quiz_id)) {
 }
 
 try {
-    // Get quiz details
-    $stmt = $pdo->prepare("SELECT * FROM quizzes WHERE id = :id AND is_active = 1 LIMIT 1");
-    $stmt->execute(['id' => $quiz_id]);
+    // Get quiz details with multi-tenant security
+    if ($_SESSION['role'] === 'system_admin') {
+        // System admin can access all quizzes
+        $stmt = $pdo->prepare("SELECT * FROM quizzes WHERE id = :id AND is_active = 1 LIMIT 1");
+        $stmt->execute(['id' => $quiz_id]);
+    } else {
+        // Regular users can only access global quizzes + their organization's quizzes
+        $stmt = $pdo->prepare("
+            SELECT * FROM quizzes 
+            WHERE id = :id AND is_active = 1 
+            AND (organization_id IS NULL OR organization_id = :org_id)
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $quiz_id, 'org_id' => $_SESSION['organization_id']]);
+    }
+    
     $quiz = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$quiz) {
-        header('Location: quiz_list.php?error=' . urlencode('Quiz not found'));
+        header('Location: quiz_list.php?error=' . urlencode('Quiz not found or access denied'));
         exit();
     }
     
     // Professional access control - only allow if user has permission (except for admins)
-    if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+    if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
         if (!canUserAccessQuiz($pdo, $_SESSION['user_id'], $quiz_id)) {
             $prerequisite_msg = getPrerequisiteMessage($pdo, $_SESSION['user_id'], $quiz_id);
             $error_msg = $prerequisite_msg ?: 'This quiz is not currently available to you.';
@@ -70,7 +83,8 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($quiz['title']); ?> - Take Quiz</title>
+    <title><?php echo htmlspecialchars($quiz['title']); ?> - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -241,16 +255,20 @@ try {
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Take Quiz</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>📝 Take Quiz</h1>
+            <p>Test your cybersecurity knowledge</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <a href="quiz_list.php">Back to Quizzes</a>
             <a href="logout.php">Logout</a>
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <!-- Quiz Information -->
         <div class="quiz-info">
             <div class="quiz-title"><?php echo htmlspecialchars($quiz['title']); ?></div>

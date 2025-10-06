@@ -16,12 +16,36 @@ if (empty($content_id)) {
 }
 
 try {
-    $stmt = $pdo->prepare("SELECT * FROM content WHERE id = :id AND is_active = 1 LIMIT 1");
-    $stmt->execute(['id' => $content_id]);
+    // Build security-aware query
+    if ($_SESSION['role'] === 'system_admin') {
+        // System admin can view all content
+        $stmt = $pdo->prepare("
+            SELECT c.*, ct.name as content_type_name, o.name as organization_name
+            FROM content c
+            LEFT JOIN content_types ct ON c.content_type_id = ct.id
+            LEFT JOIN organizations o ON c.organization_id = o.id
+            WHERE c.id = :id AND c.is_active = 1 
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $content_id]);
+    } else {
+        // Regular users can only view global content + their organization's content
+        $stmt = $pdo->prepare("
+            SELECT c.*, ct.name as content_type_name, o.name as organization_name
+            FROM content c
+            LEFT JOIN content_types ct ON c.content_type_id = ct.id
+            LEFT JOIN organizations o ON c.organization_id = o.id
+            WHERE c.id = :id AND c.is_active = 1 
+            AND (c.organization_id IS NULL OR c.organization_id = :org_id)
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $content_id, 'org_id' => $_SESSION['organization_id']]);
+    }
+    
     $content = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$content) {
-        header('Location: content_list.php?error=' . urlencode('Content not found'));
+        header('Location: content_list.php?error=' . urlencode('Content not found or access denied'));
         exit();
     }
 } catch (PDOException $e) {
@@ -30,9 +54,12 @@ try {
 }
 
 // Check if file exists
-$file_path = __DIR__ . '/../' . $content['file_path'];
-if (!file_exists($file_path)) {
-    $file_error = "File not found on server";
+$file_error = null;
+if ($content['file_path']) {
+    $file_path = __DIR__ . '/' . $content['file_path'];
+    if (!file_exists($file_path)) {
+        $file_error = "File not found on server";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -40,7 +67,8 @@ if (!file_exists($file_path)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($content['title']); ?> - Cybersecurity Awareness</title>
+    <title><?php echo htmlspecialchars($content['title']); ?> - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -142,16 +170,20 @@ if (!file_exists($file_path)) {
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>View Content</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>👁️ View Content</h1>
+            <p>Cybersecurity training material</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <a href="content_list.php">Back to Library</a>
             <a href="logout.php">Logout</a>
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <div class="content-card">
             <div class="content-header">
                 <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>

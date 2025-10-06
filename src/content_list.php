@@ -5,27 +5,41 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/program_structure.php';
 
 // Handle delete action
-if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     $delete_id = $_GET['delete'];
     
     try {
+        // Security check: ensure user can only delete content they have access to
+        if ($_SESSION['role'] === 'system_admin') {
+            $security_where = '1=1';
+            $security_params = ['id' => $delete_id];
+        } else {
+            $security_where = '(organization_id IS NULL OR organization_id = :org_id)';
+            $security_params = ['id' => $delete_id, 'org_id' => $_SESSION['organization_id']];
+        }
+        
         // Get file path before deleting from database
-        $stmt = $pdo->prepare("SELECT file_path FROM content WHERE id = :id LIMIT 1");
-        $stmt->execute(['id' => $delete_id]);
+        $stmt = $pdo->prepare("SELECT file_path FROM content WHERE id = :id AND $security_where LIMIT 1");
+        $stmt->execute($security_params);
         $content_to_delete = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($content_to_delete) {
             // Delete from database
-            $stmt = $pdo->prepare("DELETE FROM content WHERE id = :id");
-            $stmt->execute(['id' => $delete_id]);
+            $stmt = $pdo->prepare("DELETE FROM content WHERE id = :id AND $security_where");
+            $stmt->execute($security_params);
             
             // Delete physical file
-            $file_path = __DIR__ . '/../' . $content_to_delete['file_path'];
-            if (file_exists($file_path)) {
-                unlink($file_path);
+            if ($content_to_delete['file_path']) {
+                $file_path = __DIR__ . '/' . $content_to_delete['file_path'];
+                if (file_exists($file_path)) {
+                    unlink($file_path);
+                }
             }
             
             header('Location: content_list.php?success=' . urlencode('Content deleted successfully'));
+            exit();
+        } else {
+            header('Location: content_list.php?error=' . urlencode('Content not found or access denied'));
             exit();
         }
     } catch (PDOException $e) {
@@ -44,16 +58,26 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 $filter_type = $_GET['type'] ?? '';
 $filter_month = $_GET['month'] ?? '';
 
-// Build query with filters
-$where_conditions = ['is_active = 1'];
+// Build query with filters and multi-tenant security
+$where_conditions = ['c.is_active = 1'];
 $params = [];
 
+// Multi-tenant security
+if ($_SESSION['role'] === 'system_admin') {
+    // System admin can see all content
+} else {
+    // Regular users can only see global content + their organization's content
+    $where_conditions[] = '(c.organization_id IS NULL OR c.organization_id = :org_id)';
+    $params['org_id'] = $_SESSION['organization_id'];
+}
+
+// Add filters
 if (!empty($filter_type)) {
-    $where_conditions[] = 'content_type = :type';
+    $where_conditions[] = 'ct.name = :type';
     $params['type'] = $filter_type;
 }
 if (!empty($filter_month)) {
-    $where_conditions[] = 'month_number = :month';
+    $where_conditions[] = 'c.month_number = :month';
     $params['month'] = $filter_month;
 }
 
@@ -61,9 +85,14 @@ $where_clause = implode(' AND ', $where_conditions);
 
 try {
     $stmt = $pdo->prepare("
-        SELECT * FROM content 
+        SELECT c.*, ct.name as content_type_name, o.name as organization_name,
+               u.first_name || ' ' || u.last_name as uploaded_by_name
+        FROM content c 
+        LEFT JOIN content_types ct ON c.content_type_id = ct.id
+        LEFT JOIN organizations o ON c.organization_id = o.id
+        LEFT JOIN users u ON c.uploaded_by = u.id
         WHERE $where_clause 
-        ORDER BY created_at DESC
+        ORDER BY c.month_number ASC, c.created_at DESC
     ");
     $stmt->execute($params);
     $content_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -71,6 +100,16 @@ try {
     $content_list = [];
     $error = "Error loading content: " . $e->getMessage();
 }
+
+// Get available content types for filter
+try {
+    $type_stmt = $pdo->prepare("SELECT DISTINCT name FROM content_types ORDER BY name");
+    $type_stmt->execute();
+    $available_types = $type_stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    $available_types = [];
+}
+
 $success = $_GET['success'] ?? '';
 $error = $_GET['error'] ?? $error ?? '';
 ?>
@@ -79,218 +118,71 @@ $error = $_GET['error'] ?? $error ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Library - Cybersecurity Awareness</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background: #f5f7fa;
-        }
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { margin: 0; font-size: 24px; }
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .nav-links a:hover { background: rgba(255,255,255,0.1); }
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-        .filters {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        .filter-row {
-            display: flex;
-            gap: 20px;
-            align-items: end;
-        }
-        .filter-group {
-            flex: 1;
-        }
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #555;
-        }
-        .filter-group select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 6px;
-        }
-        .filter-btn, .clear-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .filter-btn {
-            background: #3498db;
-            color: white;
-        }
-        .clear-btn {
-            background: #95a5a6;
-            color: white;
-            margin-left: 10px;
-        }
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .content-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: transform 0.2s;
-        }
-        .content-card:hover {
-            transform: translateY(-5px);
-        }
-        .content-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        .content-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #2c3e50;
-        }
-        .content-meta {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .meta-badge {
-            background: #ecf0f1;
-            color: #555;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .content-description {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .content-actions {
-            padding: 15px 20px;
-            background: #f8f9fa;
-        }
-        .view-btn {
-            background: #27ae60;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .view-btn:hover {
-            background: #219a52;
-        }
-        .delete-btn {
-            background: #e74c3c;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 14px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #666;
-        }
-    </style>
+    <title>Content Library - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
 </head>
 <body>
-    <div class="header">
-        <h1>Content Library</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>📚 Content Library</h1>
+            <p>Cybersecurity training materials for South African SMMEs</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
-            <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
+            <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
                 <a href="content_upload.php">Upload Content</a>
             <?php endif; ?>
+            <a href="quiz_list.php">Quiz Library</a>
             <a href="logout.php">Logout</a>
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <!-- Success/Error Messages -->
         <?php if ($success): ?>
-            <div class="success-message" style="background: #d4edda; color: #155724; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+            <div class="african-success-message">
                 <?php echo htmlspecialchars(urldecode($success)); ?>
             </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="error-message" style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #dc3545;">
+            <div class="african-error-message">
                 <?php echo htmlspecialchars($error); ?>
             </div>
         <?php endif; ?>
 
         <!-- Filters -->
-        <div class="filters">
+        <div class="african-card african-filters">
+            <h3 style="margin-bottom: 20px; color: var(--primary-dark);">🔍 Filter Content</h3>
             <form method="GET" action="">
-                <div class="filter-row">
-                    <div class="filter-group">
+                <div class="african-filter-row">
+                    <div class="african-filter-group">
                         <label for="type">Content Type</label>
-                        <select id="type" name="type">
+                        <select id="type" name="type" class="african-select">
                             <option value="">All Types</option>
-                            <option value="document" <?php echo $filter_type === 'document' ? 'selected' : ''; ?>>Documents</option>
-                            <option value="image" <?php echo $filter_type === 'image' ? 'selected' : ''; ?>>Images</option>
-                            <option value="video" <?php echo $filter_type === 'video' ? 'selected' : ''; ?>>Videos</option>
-                            <option value="misc" <?php echo $filter_type === 'misc' ? 'selected' : ''; ?>>Miscellaneous</option>
+                            <?php foreach ($available_types as $type): ?>
+                                <option value="<?php echo htmlspecialchars($type); ?>" 
+                                        <?php echo $filter_type === $type ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($type); ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="filter-group">
-                        <label for="cycle">Cycle</label>
-                        <select id="cycle" name="cycle">
-                            <option value="">All Cycles</option>
-                            <option value="1" <?php echo $filter_cycle === '1' ? 'selected' : ''; ?>>Cycle 1</option>
-                            <option value="2" <?php echo $filter_cycle === '2' ? 'selected' : ''; ?>>Cycle 2</option>
-                            <option value="3" <?php echo $filter_cycle === '3' ? 'selected' : ''; ?>>Cycle 3</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="month">Month</label>
-                        <select id="month" name="month">
+                    <div class="african-filter-group">
+                        <label for="month">Program Month</label>
+                        <select id="month" name="month" class="african-select">
                             <option value="">All Months</option>
                             <?php for($i = 1; $i <= 12; $i++): ?>
-                                <option value="<?php echo $i; ?>" <?php echo $filter_month === (string)$i ? 'selected' : ''; ?>>Month <?php echo $i; ?></option>
+                                <option value="<?php echo $i; ?>" <?php echo $filter_month === (string)$i ? 'selected' : ''; ?>>
+                                    Month <?php echo $i; ?> - <?php echo PROGRAM_STRUCTURE[$i]['theme']; ?>
+                                </option>
                             <?php endfor; ?>
                         </select>
                     </div>
-                    <div>
-                        <button type="submit" class="filter-btn">Filter</button>
-                        <a href="content_list.php" class="clear-btn">Clear</a>
+                    <div class="african-filter-actions">
+                        <button type="submit" class="african-btn african-btn-primary">🔍 Filter</button>
+                        <a href="content_list.php" class="african-btn african-btn-secondary">🗑️ Clear</a>
                     </div>
                 </div>
             </form>
@@ -298,33 +190,77 @@ $error = $_GET['error'] ?? $error ?? '';
 
         <!-- Content Grid -->
         <?php if (empty($content_list)): ?>
-            <div class="empty-state">
-                <h3>No content found</h3>
+            <div class="african-empty-state">
+                <h3>📂 No content found</h3>
                 <p>Try adjusting your filters or upload some content to get started.</p>
+                <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                    <p><a href="content_upload.php" class="african-link">📤 Upload your first content</a></p>
+                <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="content-grid">
+            <div class="african-content-grid">
                 <?php foreach ($content_list as $content): ?>
-                    <div class="content-card">
-                        <div class="content-header">
-                            <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>
-                            <div class="content-meta">
-                                <span class="meta-badge"><?php echo ucfirst($content['content_type']); ?></span>
-                                <?php if ($content['cycle_number']): ?>
-                                    <span class="meta-badge">Cycle <?php echo $content['cycle_number']; ?></span>
-                                <?php endif; ?>
+                    <div class="african-card african-content-card">
+                        <div class="african-content-header">
+                            <h3 class="african-content-title"><?php echo htmlspecialchars($content['title']); ?></h3>
+                            <div class="african-content-meta">
+                                <span class="african-badge african-badge-type">
+                                    <?php echo htmlspecialchars($content['content_type_name']); ?>
+                                </span>
                                 <?php if ($content['month_number']): ?>
-                                    <span class="meta-badge">Month <?php echo $content['month_number']; ?></span>
+                                    <span class="african-badge african-badge-month">
+                                        Month <?php echo $content['month_number']; ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($content['organization_name']): ?>
+                                    <span class="african-badge african-badge-org">
+                                        <?php echo htmlspecialchars($content['organization_name']); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="african-badge african-badge-global">Global</span>
                                 <?php endif; ?>
                             </div>
+                            
                             <?php if ($content['description']): ?>
-                                <div class="content-description"><?php echo htmlspecialchars($content['description']); ?></div>
+                                <p class="african-content-description">
+                                    <?php echo htmlspecialchars($content['description']); ?>
+                                </p>
                             <?php endif; ?>
+                            
+                            <div class="african-content-stats">
+                                <?php if ($content['file_size']): ?>
+                                    <span class="african-stat">📊 <?php echo number_format($content['file_size'] / 1024, 1); ?> KB</span>
+                                <?php endif; ?>
+                                <span class="african-stat">📅 <?php echo date('M j, Y', strtotime($content['created_at'])); ?></span>
+                                <?php if ($content['uploaded_by_name']): ?>
+                                    <span class="african-stat">👤 <?php echo htmlspecialchars($content['uploaded_by_name']); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="content-actions">
-                            <a href="view_content.php?id=<?php echo $content['id']; ?>" class="view-btn">View Content</a>
-                            <?php if (in_array($_SESSION['role'], ['admin', 'org_admin'])): ?>
-                                <a href="content_list.php?delete=<?php echo $content['id']; ?>" class="delete-btn" onclick="return confirm('Are you sure you want to delete this content?')">Delete</a>
+                        
+                        <div class="african-content-actions">
+                            <?php if ($content['external_url']): ?>
+                                <a href="<?php echo htmlspecialchars($content['external_url']); ?>" 
+                                   target="_blank" class="african-btn african-btn-primary">
+                                    🌐 Open Link
+                                </a>
+                            <?php elseif ($content['file_path']): ?>
+                                <a href="view_content.php?id=<?php echo $content['id']; ?>" 
+                                   class="african-btn african-btn-primary">
+                                    👁️ View
+                                </a>
+                                <a href="download_content.php?id=<?php echo $content['id']; ?>" 
+                                   class="african-btn african-btn-secondary">
+                                    📥 Download
+                                </a>
+                            <?php endif; ?>
+                            
+                            <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                                <a href="content_list.php?delete=<?php echo $content['id']; ?>" 
+                                   class="african-btn african-btn-danger" 
+                                   onclick="return confirm('Are you sure you want to delete this content?')">
+                                    🗑️ Delete
+                                </a>
                             <?php endif; ?>
                         </div>
                     </div>

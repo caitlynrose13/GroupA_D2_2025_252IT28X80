@@ -9,7 +9,7 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit();
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     header('Location: dashboard.php?error=' . urlencode('Access denied. Quiz creation permission required.'));
     exit();
 }
@@ -22,7 +22,8 @@ $error = $_GET['error'] ?? '';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Quiz - Cybersecurity Awareness</title>
+    <title>Create Quiz - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -166,9 +167,13 @@ $error = $_GET['error'] ?? '';
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Create Quiz</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>🎯 Create Quiz</h1>
+            <p>Design cybersecurity assessments</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <a href="quiz_list.php">View Quizzes</a>
             <a href="content_list.php">Content Library</a>
@@ -176,7 +181,7 @@ $error = $_GET['error'] ?? '';
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <?php if ($success): ?>
             <div class="success-message">
                 <?php echo htmlspecialchars(urldecode($success)); ?>

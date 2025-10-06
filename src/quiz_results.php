@@ -70,7 +70,8 @@ if (isset($_SESSION['quiz_results'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Results - <?php echo htmlspecialchars($results['quiz_title']); ?></title>
+    <title>Quiz Results - <?php echo htmlspecialchars($results['quiz_title']); ?> - South African SMME Cybersecurity Portal</title>
+    <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -222,16 +223,20 @@ if (isset($_SESSION['quiz_results'])) {
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Quiz Results</h1>
-        <div class="nav-links">
+    <div class="african-header">
+        <div class="african-border"></div>
+        <div class="african-header-content">
+            <h1>📊 Quiz Results</h1>
+            <p>Your cybersecurity assessment results</p>
+        </div>
+        <div class="african-nav-links">
             <a href="dashboard.php">Dashboard</a>
             <a href="quiz_list.php">Quiz Library</a>
             <a href="logout.php">Logout</a>
         </div>
     </div>
     
-    <div class="container">
+    <div class="african-container">
         <!-- Results Summary -->
         <div class="results-card">
             <div class="result-icon <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
