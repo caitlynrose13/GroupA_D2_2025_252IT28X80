@@ -300,6 +300,11 @@ if (isset($_SESSION['quiz_results'])) {
                                 <span>Correct Answer: <strong class="answer-correct"><?php echo htmlspecialchars($question['correct_answer']); ?></strong></span>
                             </div>
                         <?php endif; ?>
+                        <?php if (!empty($question['explanation'])): ?>
+                            <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-left: 3px solid #3498db; border-radius: 4px;">
+                                <strong>💡 Explanation:</strong> <?php echo htmlspecialchars($question['explanation']); ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>

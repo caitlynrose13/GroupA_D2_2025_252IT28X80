@@ -36,9 +36,9 @@ try {
         exit();
     }
     
-    // Get quiz questions with correct answers and points
+    // Get quiz questions with correct answers, points, and explanations
     $stmt = $pdo->prepare("
-        SELECT id, question_text, correct_answer, points 
+        SELECT id, question_text, question_type, correct_answer, explanation, points 
         FROM quiz_questions 
         WHERE quiz_id = :quiz_id 
         ORDER BY question_order ASC
@@ -93,7 +93,10 @@ try {
         $question_id = $question['id'];
         $user_answer = $answers[$question_id] ?? '';
         $correct_answer = $question['correct_answer'];
-        $is_correct = ($user_answer === $correct_answer);
+        
+        // Case-insensitive comparison for true/false answers
+        $is_correct = (strtoupper($user_answer) === strtoupper($correct_answer));
+        
         $points = $question['points'] ?? 1;
         $total_points += $points;
         
@@ -118,8 +121,10 @@ try {
         $question_results[] = [
             'question_id' => $question_id,
             'question_text' => $question['question_text'],
+            'question_type' => $question['question_type'],
             'user_answer' => $user_answer,
             'correct_answer' => $correct_answer,
+            'explanation' => $question['explanation'],
             'is_correct' => $is_correct
         ];
     }
