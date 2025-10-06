@@ -41,44 +41,61 @@ function canUserAccessQuiz($pdo, $user_id, $quiz_id) {
 }
 
 /**
- * Check if user has completed all prerequisite quizzes for a given cycle
+ * Check if user has completed prerequisite quiz for the current cycle
+ * Only checks the previous cycle's assessment quiz (month 4, 8, or 12)
  */
 function hasCompletedPrerequisites($pdo, $user_id, $current_month) {
-    // For month 1, no prerequisites needed
-    if ($current_month <= 1) {
+    require_once __DIR__ . '/config/program_structure.php';
+    
+    // Get the current cycle
+    $current_cycle = getCycleByMonth($current_month);
+    if (!$current_cycle) {
+        // If month is not in known cycles, allow access (fail open for flexibility)
         return true;
     }
     
-    // Check if user has passed all previous months
-    for ($month = 1; $month < $current_month; $month++) {
-        $stmt = $pdo->prepare("
-            SELECT qr.passed 
-            FROM quiz_results qr
-            JOIN quizzes q ON qr.quiz_id = q.id
-            WHERE qr.user_id = :user_id AND q.month_number = :month_number
-            ORDER BY qr.completed_at DESC
-            LIMIT 1
-        ");
-        $stmt->execute([
-            'user_id' => $user_id,
-            'month_number' => $month
-        ]);
-        
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        // If no attempt found or didn't pass, prerequisites not met
-        if (!$result || !$result['passed']) {
-            return false;
-        }
+    // Cycle 1 has no prerequisites
+    if ($current_cycle['cycle_number'] == 1) {
+        return true;
     }
     
-    return true; // All prerequisites met
+    // Get the previous cycle's quiz month
+    $previous_cycle_number = $current_cycle['cycle_number'] - 1;
+    $previous_cycle = PROGRAM_CYCLES[$previous_cycle_number] ?? null;
+    if (!$previous_cycle) {
+        // If no previous cycle found, allow access (fail open)
+        return true;
+    }
+    
+    $prerequisite_month = $previous_cycle['quiz_month'];
+    
+    // Check if user passed the previous cycle's assessment quiz
+    $stmt = $pdo->prepare("
+        SELECT qr.passed 
+        FROM quiz_results qr
+        JOIN quizzes q ON qr.quiz_id = q.id
+        WHERE qr.user_id = :user_id AND q.month_number = :month_number
+        ORDER BY qr.completed_at DESC
+        LIMIT 1
+    ");
+    $stmt->execute([
+        'user_id' => $user_id,
+        'month_number' => $prerequisite_month
+    ]);
+    
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // User must have passed the prerequisite quiz
+    return ($result && $result['passed']);
 }
 
 /**
  * Get prerequisite status message for a quiz
+ * Returns a user-friendly message about which cycle assessment needs to be completed
  */
 function getPrerequisiteMessage($pdo, $user_id, $quiz_id) {
+    require_once __DIR__ . '/config/program_structure.php';
+    
     $stmt = $pdo->prepare("
         SELECT month_number, requires_previous_completion
         FROM quizzes 
@@ -91,29 +108,23 @@ function getPrerequisiteMessage($pdo, $user_id, $quiz_id) {
         return '';
     }
     
-    $missing_months = [];
-    for ($month = 1; $month < $quiz['month_number']; $month++) {
-        $stmt = $pdo->prepare("
-            SELECT qr.passed 
-            FROM quiz_results qr
-            JOIN quizzes q ON qr.quiz_id = q.id
-            WHERE qr.user_id = :user_id AND q.month_number = :month_number
-            ORDER BY qr.completed_at DESC
-            LIMIT 1
-        ");
-        $stmt->execute([
-            'user_id' => $user_id,
-            'month_number' => $month
-        ]);
-        
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$result || !$result['passed']) {
-            $missing_months[] = $month;
-        }
+    // Get the current cycle
+    $current_cycle = getCycleByMonth($quiz['month_number']);
+    if (!$current_cycle || $current_cycle['cycle_number'] == 1) {
+        return '';
     }
     
-    if (!empty($missing_months)) {
-        return "You must complete and pass Month " . implode(', ', $missing_months) . " quiz(s) first.";
+    // Get the previous cycle information
+    $previous_cycle_number = $current_cycle['cycle_number'] - 1;
+    $previous_cycle = PROGRAM_CYCLES[$previous_cycle_number] ?? null;
+    if (!$previous_cycle) {
+        return '';
+    }
+    
+    // Check if user passed the prerequisite
+    if (!hasCompletedPrerequisites($pdo, $user_id, $quiz['month_number'])) {
+        $cycle_title = $previous_cycle['title'] ?? "Cycle " . $previous_cycle_number;
+        return "You must complete and pass the " . $cycle_title . " assessment quiz (Month " . $previous_cycle['quiz_month'] . ") first.";
     }
     
     return '';
