@@ -20,7 +20,7 @@ if (isset($_GET['delete']) && in_array($_SESSION['role'], ['admin', 'org_admin']
             $stmt->execute(['id' => $delete_id]);
             
             // Delete physical file
-            $file_path = __DIR__ . '/../' . $content_to_delete['file_path'];
+            $file_path = __DIR__ . '/' . $content_to_delete['file_path'];
             if (file_exists($file_path)) {
                 unlink($file_path);
             }

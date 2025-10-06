@@ -16,7 +16,13 @@ if (empty($content_id)) {
 }
 
 try {
-    $stmt = $pdo->prepare("SELECT * FROM content WHERE id = :id AND is_active = 1 LIMIT 1");
+    $stmt = $pdo->prepare("
+        SELECT c.*, ct.name as content_type
+        FROM content c
+        LEFT JOIN content_types ct ON c.content_type_id = ct.id
+        WHERE c.id = :id AND c.is_active = 1 
+        LIMIT 1
+    ");
     $stmt->execute(['id' => $content_id]);
     $content = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -30,7 +36,7 @@ try {
 }
 
 // Check if file exists
-$file_path = __DIR__ . '/../' . $content['file_path'];
+$file_path = __DIR__ . '/' . $content['file_path'];
 if (!file_exists($file_path)) {
     $file_error = "File not found on server";
 }
@@ -156,8 +162,8 @@ if (!file_exists($file_path)) {
             <div class="content-header">
                 <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>
                 <div class="content-meta">
-                    <span class="meta-badge"><?php echo ucfirst($content['content_type']); ?></span>
-                    <span class="meta-badge"><?php echo strtoupper($content['file_type']); ?> File</span>
+                    <span class="meta-badge"><?php echo ucfirst($content['content_type'] ?? 'content'); ?></span>
+                    <span class="meta-badge"><?php echo strtoupper($content['file_type'] ?? 'file'); ?> File</span>
                     <?php if ($content['cycle_number']): ?>
                         <span class="meta-badge">Cycle <?php echo $content['cycle_number']; ?></span>
                     <?php endif; ?>

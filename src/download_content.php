@@ -29,7 +29,7 @@ try {
     exit();
 }
 
-$file_path = __DIR__ . '/../' . $content['file_path'];
+$file_path = __DIR__ . '/' . $content['file_path'];
 
 if (!file_exists($file_path)) {
     header('Location: content_list.php?error=' . urlencode('File not found'));
