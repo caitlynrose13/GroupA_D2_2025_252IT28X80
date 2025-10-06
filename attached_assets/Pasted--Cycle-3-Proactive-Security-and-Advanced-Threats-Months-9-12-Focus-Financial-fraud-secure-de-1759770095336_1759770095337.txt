@@ -1,0 +1,111 @@
+🔐 Cycle 3: Proactive Security and Advanced Threats (Months 9–12)
+
+Focus: Financial fraud, secure device use, insider threats, and proactive reporting
+
+📅 Month 9: Business Email Compromise (BEC) and Financial Fraud
+
+1. Which of the following is the most common sign of a Business Email Compromise (BEC) attempt?
+
+a) A request to change your company email password from a system administrator.
+
+b) An email with a large attachment that is not part of a scheduled company project.
+
+c) An urgent request from a “supervisor” to transfer funds to a new, unfamiliar bank account. ✅
+
+d) An email from an unknown sender with a generic subject line like 'Hello'.
+
+2. True or False: BEC attacks are easy to spot because the email address of the sender will always be completely different from the real one.
+Answer: False ✅
+Explanation (verbatim):
+
+BEC attackers frequently use email addresses that are nearly identical to the legitimate sender's, or they may spoof the display name, making the fraud hard to detect without close inspection of the full email address.
+
+3. What should you do if you receive an email requesting an urgent wire transfer to an unfamiliar account, even if it appears to be from a senior executive?
+
+a) Mark the email as spam and delete it, assuming it is a fraudulent request.
+
+b) Immediately process the request to avoid delays and potential reprimands.
+
+c) Call the executive using a known, legitimate phone number/secure message channel to verify the request ✅
+
+d) Reply directly to the email and ask for confirmation of the request.
+
+4. What is the primary difference between a general phishing attack and a BEC attack?
+
+a) Phishing attacks are always sent from an internal company email address, while BEC attacks are always external.
+
+b) Phishing attacks typically aim to steal personal information or credentials, while BEC attacks specifically target financial transactions. ✅
+
+c) BEC attacks use attachments to install malware, while phishing attacks do not.
+
+d) Phishing is a new type of attack, while BEC has been around for decades.
+
+📅 Month 10: Secure Device and Network Usage
+
+1. What is the primary risk of using an unsecure public Wi-Fi network for company business?
+
+a) Attackers can easily monitor, capture, and steal the data you are sending and receiving. ✅
+
+b) The public Wi-Fi network will automatically download viruses onto your device.
+
+c) You will be unable to access certain company websites and services.
+
+d) Your device will drain its battery faster than normal.
+
+2. True or False: Using the same password for both your personal accounts and your work accounts is safe, even if the password is strong.
+Answer: False ✅
+
+3. What is the purpose of keeping your device's software and applications updated?
+
+a) To make the device run faster and improve performance.
+
+b) To ensure you have all the latest emojis and features.
+
+c) To patch security vulnerabilities and protect against new threats. ✅
+
+d) To force you to buy a new device sooner.
+
+4. Multi-factor authentication (MFA) is a security measure that requires you to:
+
+a) Provide two or more different forms of verification to prove your identity. ✅
+
+b) Use a physical security key to access all company systems.
+
+c) Log in to your account from a single, approved device at all times.
+
+d) Use a password that is at least 12 characters long and contains letters, numbers, and symbols.
+
+📅 Month 11: Insider Threats and Threat Reporting
+
+1. You notice a coworker has written their login password on a sticky note attached to their monitor. What is the most appropriate action to take?
+
+a) Silently remove the sticky note and throw it away to protect them.
+
+b) Politely and privately inform your coworker of the security risk and then report the incident to the IT or security team. ✅
+
+c) Do nothing, as it is a personal matter and not a direct threat to the company.
+
+d) Send a company-wide email warning everyone about poor password security.
+
+2. True or False: Reporting a security concern, even if you are unsure it's a real threat, is a waste of time and could get you in trouble.
+Answer: False ✅
+
+3. What is a key sign of a potential malicious insider threat?
+
+a) The employee is frequently late to work.
+
+b) The employee is trying to access data or systems that are not required for their job. ✅
+
+c) The employee is working on a new project.
+
+d) The employee is taking a lot of sick days.
+
+4. You notice a co-worker taking pictures of sensitive company documents on their personal phone, which is against company policy. What is the most appropriate action?
+
+a) Confront the co-worker and demand they delete the photos.
+
+b) Ignore it, as it is likely not a serious issue.
+
+c) Immediately report the incident to your manager or the security team through the proper channels. ✅
+
+d) Post about suspicious behavior on social media to raise awareness.

@@ -1,0 +1,113 @@
+🔐 Cycle 2: POPIA and Data Protection (Months 5–8)
+
+Focus: Regulatory awareness and practical data handling
+
+📅 Month 5: POPIA Basics
+
+1. What is the primary purpose of POPIA?
+
+a) To make it easier for companies to share customer data with third parties.
+
+b) To protect the fundamental right to privacy by safeguarding personal information processed by public and private bodies. ✅
+
+c) To ensure all company data, regardless of sensitivity, is encrypted at all times.
+
+d) To grant companies unlimited rights to use employee data for marketing purposes.
+
+2. Under POPIA, which of the following is generally considered “Personal Information”?
+
+a) The publicly listed phone number of a company’s main reception desk.
+
+b) The weather forecast for Johannesburg.
+
+c) An employee’s ID number, home address, and salary details. ✅
+
+d) The generic company newsletter sent to all customers.
+
+3. According to POPIA’s conditions for lawful processing, what does “Consent” generally require?
+
+a) It is always the only legal ground for processing personal information.
+
+b) It must be implied from the data subject’s actions, like using a service.
+
+c) It must be voluntary, specific, informed, and given through an explicit affirmative action. ✅
+
+d) Once given, it is valid indefinitely and cannot be withdrawn.
+
+4. Which of the following is a key right granted to individuals (data subjects) under POPIA?
+
+a) The right to force a company to delete all data it holds about them, regardless of legal obligations.
+
+b) The right to access their own personal information held by a responsible party. ✅
+
+c) The right to prevent a company from processing any personal information for operational purposes.
+
+d) The right to sell their personal information to the highest bidder.
+
+📅 Month 6: Data Handling and Compliance
+
+5. Which of the following is a critical initial step for an enterprise in ensuring comprehensive data protection?
+
+a) Deploying a Data Loss Prevention (DLP) solution across all assets
+
+b) Establishing a data management process that includes classification, handling, retention, and disposal requirements ✅
+
+c) Encrypting all data on end-user devices and removable media
+
+d) Centralising audit log collection for sensitive data access
+
+6. What are two key methods for protecting sensitive data at different stages of its lifecycle?
+
+a) Implementing multi-factor authentication for remote access and conducting penetration testing
+
+b) Encrypting data both in transit and at rest, and configuring data access control lists based on a user's need to know ✅
+
+c) Utilising automated software inventory tools and deploying host-based intrusion detection solutions
+
+d) Establishing an incident response process and performing automated backups
+
+7. Why is real-time or near real-time compliance monitoring emphasized over traditional periodic IT audits for information security?
+
+a) To reduce the overall cost of IT security operations.
+
+b) Because modern IT systems' dependence requires immediate detection and reporting of discrepancies for effective risk management ✅
+
+c) To solely satisfy regulatory requirements, which are increasingly strict.
+
+d) Traditional audits are no longer performed by most companies.
+
+8. Which of the following topics should workforce members be specifically trained on as part of data handling best practices?
+
+a) Advanced network penetration testing techniques.
+
+b) How to identify and properly store, transfer, archive, and destroy sensitive data, including clear screen and desk best practices ✅
+
+c) Developing secure software applications and managing database systems.
+
+d) Configuring firewalls and managing antivirus software updates.
+
+📅 Month 7: Physical Security and Data Privacy
+
+9. True or False: Physical security measures are solely concerned with protecting equipment from external physical threats, such as theft.
+Answer: False ✅
+Explanation (verbatim):
+
+Physical security goes beyond just preventing external theft of equipment. It also encompasses a wider range of measures, including safeguarding secure areas within buildings, implementing strict physical entry controls, securing offices and facilities, and protecting against environmental threats like fire or water damage.
+
+10. True or False: Data privacy is mainly concerned with using strong passwords and encryption to stop hackers from accessing sensitive information.
+Answer: False ✅
+Explanation (verbatim):
+
+While strong passwords and encryption are important cybersecurity measures to protect data, data privacy is a broader concept. It focuses on the appropriate use and overall management of data throughout its entire lifecycle, from how it is collected and processed to how it is stored, shared, and eventually disposed of.
+
+11. True or False: Data privacy within an organisation is solely about the technical process of encrypting data to prevent unauthorized access.
+Answer: False ✅
+Explanation (verbatim):
+
+Data privacy is a broader concept than just technical encryption. While encryption is an important tool for protecting data confidentiality, privacy is fundamentally about the appropriate use and management of data throughout its entire lifecycle. This includes how data is collected, used, shared, retained, and disposed of, encompassing organisational policies, procedures, and the behaviour of all individuals handling data, not just technical safeguards.
+
+12. True or False: Physical security in an organisation is only about keeping unauthorised people out of computer rooms.
+Answer: False ✅
+Explanation (verbatim):
+
+Physical security involves much more than just restricting entry to computer rooms. It encompasses a wide range of protections, including safeguarding all secure areas, controlling physical access to facilities, and protecting against environmental threats like fire or floods
