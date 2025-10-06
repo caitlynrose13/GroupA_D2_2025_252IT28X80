@@ -1,40 +1,5 @@
 <?php
 // filepath: src/dashboard.php
-// ============================================================================
-// TEAMMATE CONTRIBUTION SUMMARY:
-// ============================================================================
-// The following enhancements were contributed by [Teammate Name]:
-// 
-// 1. ROLE-BASED DASHBOARD CUSTOMIZATION:
-//    - Added dynamic welcome messages based on user role
-//    - Created role-specific statistics displays (employee vs admin views)
-//    - Implemented context-aware quick action buttons
-// 
-// 2. ENHANCED USER MANAGEMENT INTEGRATION:
-//    - Added user count statistics for administrators
-//    - Included user management navigation link
-//    - Prepared foundation for user management functionality
-// 
-// 3. IMPROVED CODE STRUCTURE:
-//    - Better error handling with proper logging
-//    - Cleaner role-based conditional logic
-//    - More maintainable variable organization
-// 
-// 4. USER EXPERIENCE IMPROVEMENTS:
-//    - Employee-focused learning interface with progress tracking
-//    - Organization admin tools for team management
-//    - System admin platform oversight capabilities
-// 
-// 5. PROFESSIONAL DASHBOARD DESIGN:
-//    - Removed duplicate Quick Actions sections
-//    - Simplified action buttons without excessive emojis
-//    - Created clean, enterprise-grade interface
-//    - Added role-appropriate content sections
-// 
-// These changes transform a generic dashboard into a professional,
-// enterprise-grade interface that provides role-appropriate experiences
-// for each user type in our multi-tenant cybersecurity platform.
-// ============================================================================
 
 session_start();
 require_once __DIR__ . '/config/db.php';
@@ -60,7 +25,7 @@ if ($_SESSION['organization_id']) {
 }
 
 // Get some basic stats for the dashboard
-// TEAMMATE CONTRIBUTION: Enhanced statistics with role-based user counting
+// Beverley: Enhanced statistics with role-based user counting
 $content_count = 0;
 $quiz_count = 0;
 $user_count = 0; // New statistic for Admins - shows organizational oversight capability
@@ -69,7 +34,7 @@ try {
     $role = $_SESSION['role'];
     $org_id = $_SESSION['organization_id'];
 
-    // TEAMMATE CONTRIBUTION: Improved role-based security logic
+    // Beverley: Improved role-based security logic
     // Define WHERE clause and parameters based on role for better code maintainability
     if ($role === 'system_admin') {
         $content_where = '1=1';
@@ -96,7 +61,7 @@ try {
     $quiz_stmt->execute($content_params);
     $quiz_count = $quiz_stmt->fetchColumn();
 
-    // TEAMMATE CONTRIBUTION: Enhanced user management statistics for administrators
+    // Beverley: Enhanced user management statistics for administrators
     // Count users (only for admins) - provides organizational oversight
     if (in_array($role, ['system_admin', 'org_admin'])) {
         $user_stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND $user_where");
@@ -105,7 +70,7 @@ try {
     }
     
 } catch (PDOException $e) {
-    // TEAMMATE CONTRIBUTION: Better error handling with proper logging
+    // Beverley: Better error handling with proper logging
     // Log error, but keep counts at 0 for a clean dashboard display
     error_log("Dashboard DB Error: " . $e->getMessage());
 }
@@ -158,7 +123,7 @@ $error = $_GET['error'] ?? '';
 
         <div class="welcome-card">
             <?php 
-                // TEAMMATE CONTRIBUTION: Dynamic role-based welcome messages
+                // Beverley: Dynamic role-based welcome messages
                 // Provides personalized, context-aware dashboard experience
                 $role = $_SESSION['role'];
                 $welcome_message = "Welcome back, " . htmlspecialchars($_SESSION['first_name']);
@@ -182,7 +147,7 @@ $error = $_GET['error'] ?? '';
             <?php endif; ?>
         </div>
 
-        <!-- TEAMMATE CONTRIBUTION: Role-based statistics display -->
+        <!-- Beverley: Role-based statistics display -->
         <!-- Provides relevant metrics for each user type -->
         <?php if ($role === 'employee'): ?>
             <?php
