@@ -56,10 +56,10 @@ GroupA_D2_2025_252IT28X80/
    - ✅ Content library with filtering by type, cycle, and month
    - ✅ Role-based permissions (upload/delete for admins only)
    - ✅ Content viewing and download functionality
-4. **🔄 Phase 4: Assessment System** _(IN PROGRESS)_
+4. **🔄 Phase 4: Assessment System** done?
    - 🔄 Develop quiz creation functionality
    - 🔄 Implement quiz-taking interface
-   - 🔄 Store and display quiz results
+   - 🔄 Store and display quiz results not done
 5. **⏳ Phase 5: Dashboard Enhancement & Final Polish**
    - ⏳ Enhanced role-specific dashboards
    - ⏳ Navigation improvements
