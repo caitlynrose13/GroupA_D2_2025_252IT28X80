@@ -49,8 +49,11 @@ $where_conditions = ['q.is_active = 1'];
 $params = [];
 
 if (!empty($filter_cycle)) {
-    $where_conditions[] = 'q.cycle_number = :cycle';
-    $params['cycle'] = $filter_cycle;
+    $cycle_start = ($filter_cycle - 1) * 4 + 1;
+    $cycle_end = $filter_cycle * 4;
+    $where_conditions[] = 'q.month_number BETWEEN :cycle_start AND :cycle_end';
+    $params['cycle_start'] = $cycle_start;
+    $params['cycle_end'] = $cycle_end;
 }
 if (!empty($filter_month)) {
     $where_conditions[] = 'q.month_number = :month';
@@ -60,16 +63,18 @@ if (!empty($filter_month)) {
 $where_clause = implode(' AND ', $where_conditions);
 
 try {
-    // Get quizzes with question count
+    // Get quizzes with question count and status
     $stmt = $pdo->prepare("
         SELECT q.*, 
-               COUNT(qq.id) as question_count,
+               qs.name as status,
+               COUNT(DISTINCT qq.id) as question_count,
                COUNT(DISTINCT qr.user_id) as attempts_count
         FROM quizzes q 
+        LEFT JOIN quiz_statuses qs ON q.status_id = qs.id
         LEFT JOIN quiz_questions qq ON q.id = qq.quiz_id
         LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
         WHERE $where_clause 
-        GROUP BY q.id
+        GROUP BY q.id, qs.name
         ORDER BY q.created_at DESC
     ");
     $stmt->execute($params);
@@ -348,7 +353,7 @@ $error = $_GET['error'] ?? $error ?? '';
                         <div class="quiz-header">
                             <div class="quiz-title"><?php echo htmlspecialchars($quiz['title']); ?></div>
                             <div class="quiz-meta">
-                                <span class="meta-badge cycle">Cycle <?php echo $quiz['cycle_number']; ?></span>
+                                <span class="meta-badge cycle">Cycle <?php echo ceil($quiz['month_number'] / 4); ?></span>
                                 <?php if ($quiz['month_number']): ?>
                                     <span class="meta-badge month">Month <?php echo $quiz['month_number']; ?></span>
                                 <?php endif; ?>

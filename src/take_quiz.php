@@ -255,7 +255,7 @@ try {
         <div class="quiz-info">
             <div class="quiz-title"><?php echo htmlspecialchars($quiz['title']); ?></div>
             <div class="quiz-meta">
-                <span class="meta-badge cycle">Cycle <?php echo $quiz['cycle_number']; ?></span>
+                <span class="meta-badge cycle">Cycle <?php echo ceil($quiz['month_number'] / 4); ?></span>
                 <?php if ($quiz['month_number']): ?>
                     <span class="meta-badge">Month <?php echo $quiz['month_number']; ?></span>
                 <?php endif; ?>
