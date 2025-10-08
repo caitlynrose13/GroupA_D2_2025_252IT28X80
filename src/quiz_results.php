@@ -18,7 +18,7 @@ if (!$results && $quiz_id) {
     $user_id = $_GET['user_id'] ?? $_SESSION['user_id'];
     
     // Check if admin is viewing other user's results
-    if ($user_id != $_SESSION['user_id'] && !in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+    if ($user_id != $_SESSION['user_id'] && !in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
         header('Location: quiz_list.php?error=' . urlencode('Access denied'));
         exit();
     }
@@ -190,6 +190,23 @@ if (isset($_SESSION['quiz_results'])) {
         .answer-incorrect {
             color: #e74c3c;
         }
+        .explanation-box {
+            background: #f0f9ff;
+            border-left: 4px solid #3498db;
+            padding: 12px 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        .explanation-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .explanation-text {
+            color: #555;
+            line-height: 1.5;
+        }
         .actions {
             display: flex;
             gap: 15px;
@@ -303,6 +320,13 @@ if (isset($_SESSION['quiz_results'])) {
                         <?php if (!$question['is_correct']): ?>
                             <div class="answer-row">
                                 <span>Correct Answer: <strong class="answer-correct"><?php echo htmlspecialchars($question['correct_answer']); ?></strong></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($question['explanation'])): ?>
+                            <div class="explanation-box">
+                                <span class="explanation-label">💡 Explanation:</span>
+                                <div class="explanation-text"><?php echo htmlspecialchars($question['explanation']); ?></div>
                             </div>
                         <?php endif; ?>
                     </div>

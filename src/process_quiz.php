@@ -9,7 +9,7 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit();
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     header('Location: dashboard.php?error=' . urlencode('Access denied'));
     exit();
 }

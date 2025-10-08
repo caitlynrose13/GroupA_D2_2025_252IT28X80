@@ -29,10 +29,14 @@ try {
     exit();
 }
 
-$file_path = __DIR__ . '/../' . $content['file_path'];
+// Extract file extension from path
+$file_ext = strtolower(pathinfo($content['file_path'], PATHINFO_EXTENSION));
+
+// Build correct file path - file_path is already relative to src/
+$file_path = __DIR__ . '/' . $content['file_path'];
 
 if (!file_exists($file_path)) {
-    header('Location: content_list.php?error=' . urlencode('File not found'));
+    header('Location: content_list.php?error=' . urlencode('File not found: ' . $content['file_path']));
     exit();
 }
 
@@ -43,7 +47,7 @@ if (empty($safe_title)) {
     $safe_title = 'content_' . $content['id'];
 }
 
-$filename = $safe_title . '.' . $content['file_type'];
+$filename = $safe_title . '.' . $file_ext;
 
 // Set appropriate content type
 $content_types = [
@@ -61,7 +65,7 @@ $content_types = [
     'avi' => 'video/x-msvideo'
 ];
 
-$content_type = $content_types[$content['file_type']] ?? 'application/octet-stream';
+$content_type = $content_types[$file_ext] ?? 'application/octet-stream';
 
 // Set headers for download
 header('Content-Type: ' . $content_type);

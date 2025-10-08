@@ -1,0 +1,126 @@
+1. True or False: Phishing attacks can only happen through email.
+Answer: False
+
+Phishing can also occur via SMS (smishing), phone calls (vishing), or fake websites.
+
+2. Which of the following is a common red flag of a phishing email?
+
+a) Proper grammar and spelling
+
+b) Urgent requests for action
+
+c) Sent from a trusted company domain
+
+d) Personalized signature
+
+Answer: b) Urgent requests for action
+
+Phishing emails often try to create a sense of urgency to trick you into acting quickly without thinking.
+
+3. True or False: Social engineering relies more on manipulating people than exploiting technical vulnerabilities.
+Answer: True
+
+Social engineering attacks involve tricking or manipulating individuals to gain sensitive information or access.
+
+4. The safest step when you suspect phishing is:
+
+a) Click the link to confirm authenticity
+
+b) Forward it to friends for advice
+
+c) Report it to IT/security immediately
+
+d) Reply asking for more details
+
+Answer: c) Report it to IT/security immediately
+
+If you suspect a phishing attempt, reporting it promptly to IT or security personnel is the safest step.
+
+Month 2: Password Management and Authentication
+
+5. True/False: “Summer2025” is considered a strong password.
+Answer: False
+
+It’s predictable and based on common patterns (e.g., a word + year), making it easy for attackers to guess.
+
+6. What does Multi-Factor Authentication (MFA) require?
+
+a) Only a username and password
+
+b) Two or more independent verification methods
+
+c) A long password only
+
+d) A password hint
+
+Answer: b) Two or more independent verification methods
+
+MFA requires something you know (password), something you have (e.g., phone for a code), or something you are (biometrics).
+
+7. What is the main risk of reusing passwords across accounts?
+
+a) Accounts load faster
+
+b) Reduced chance of forgetting passwords
+
+c) If one account is hacked, others can be compromised
+
+d) No real risk exists
+
+Answer: c) If one account is hacked, others can be compromised
+
+Reusing passwords means a breach of one account could potentially lead to the compromise of all your accounts using the same password.
+
+8. Which of the following is the strongest password?
+
+a) Winter2025
+
+b) johndoe!
+
+c) !C0ffeeMug#92$
+
+d) password123
+
+Answer: c) !C0ffeeMug#92$
+
+A strong password should include a mix of upper and lowercase letters, numbers, and special characters, making it hard to guess.
+
+Month 3: Malware and Ransomware
+
+9. What is the best response to a ransomware attack?
+
+a) Pay the ransom quickly
+
+b) Disconnect from the network and call IT/security
+
+c) Restart the computer
+
+d) Try to guess the password
+
+Answer: b) Disconnect from the network and call IT/security
+
+The first step is to isolate the affected system to prevent the malware from spreading, then contact IT/security.
+
+10. True/False: Malware can only infect a device through email attachments.
+Answer: False
+
+Malware can also spread via USB drives, software downloads, malicious websites, and even network vulnerabilities.
+
+11. Which of the following can spread malware?
+
+a) Suspicious email attachments
+
+b) Downloading unverified software
+
+c) Visiting unsafe websites
+
+d) All of the above
+
+Answer: d) All of the above
+
+Malware can be spread through multiple vectors, including suspicious email attachments, unsafe websites, and unverified software downloads.
+
+12. True/False: Ransomware locks or encrypts your files and demands payment for release.
+Answer: True
+
+Ransomware is specifically designed to lock or encrypt files and demand a ransom payment for their release.

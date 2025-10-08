@@ -69,7 +69,6 @@ if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_
 
 // Get filter parameters
 $filter_cycle = $_GET['cycle'] ?? '';
-$filter_month = $_GET['month'] ?? '';
 
 // Build query with filters and multi-tenant security
 $where_conditions = ['q.is_active = 1'];
@@ -85,9 +84,19 @@ if ($_SESSION['role'] === 'system_admin') {
 }
 
 // Add filters
-if (!empty($filter_month)) {
-    $where_conditions[] = 'q.month_number = :month';
-    $params['month'] = $filter_month;
+if (!empty($filter_cycle)) {
+    // Map cycle to month range
+    $cycle_ranges = [
+        '1' => [1, 4],   // Cycle 1: Months 1-4
+        '2' => [5, 8],   // Cycle 2: Months 5-8
+        '3' => [9, 12]   // Cycle 3: Months 9-12
+    ];
+    
+    if (isset($cycle_ranges[$filter_cycle])) {
+        $where_conditions[] = 'q.month_number BETWEEN :cycle_start AND :cycle_end';
+        $params['cycle_start'] = $cycle_ranges[$filter_cycle][0];
+        $params['cycle_end'] = $cycle_ranges[$filter_cycle][1];
+    }
 }
 
 $where_clause = implode(' AND ', $where_conditions);
@@ -96,8 +105,8 @@ try {
     // Get quizzes with question count and organization info
     $stmt = $pdo->prepare("
         SELECT q.*, 
-               COUNT(qq.id) as question_count,
-               COUNT(DISTINCT qr.user_id) as attempts_count,
+               COUNT(DISTINCT qq.id) as question_count,
+               COUNT(DISTINCT qr.id) as attempts_count,
                o.name as organization_name,
                qs.name as status_name
         FROM quizzes q 
@@ -187,14 +196,12 @@ $error = $_GET['error'] ?? $error ?? '';
             <form method="GET" action="">
                 <div class="african-filter-row">
                     <div class="african-filter-group">
-                        <label for="month">Program Month</label>
-                        <select id="month" name="month" class="african-select">
-                            <option value="">All Months</option>
-                            <?php foreach (PROGRAM_MONTHS as $month_num => $month_info): ?>
-                                <option value="<?php echo $month_num; ?>" <?php echo $filter_month === (string)$month_num ? 'selected' : ''; ?>>
-                                    Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
-                                </option>
-                            <?php endforeach; ?>
+                        <label for="cycle">Program Cycle</label>
+                        <select id="cycle" name="cycle" class="african-select">
+                            <option value="">All Cycles</option>
+                            <option value="1" <?php echo $filter_cycle === '1' ? 'selected' : ''; ?>>Cycle 1 (Months 1-4)</option>
+                            <option value="2" <?php echo $filter_cycle === '2' ? 'selected' : ''; ?>>Cycle 2 (Months 5-8)</option>
+                            <option value="3" <?php echo $filter_cycle === '3' ? 'selected' : ''; ?>>Cycle 3 (Months 9-12)</option>
                         </select>
                     </div>
                     <div class="african-filter-actions">

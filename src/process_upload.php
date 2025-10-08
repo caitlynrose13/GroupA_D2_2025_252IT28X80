@@ -9,7 +9,7 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit();
 }
 
-if (!in_array($_SESSION['role'], ['admin', 'org_admin'])) {
+if (!in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
     header('Location: dashboard.php?error=' . urlencode('Access denied'));
     exit();
 }
@@ -32,7 +32,7 @@ if (empty($title) || empty($content_type) || !isset($_FILES['file'])) {
 }
 
 // File upload handling
-$upload_dir = __DIR__ . '/../uploads/';
+$upload_dir = __DIR__ . '/uploads/';
 if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0755, true);
 }
@@ -43,15 +43,25 @@ $file_tmp = $file['tmp_name'];
 $file_size = $file['size'];
 $file_error = $file['error'];
 
-// Check for upload errors
+// Check for upload errors with detailed messages
 if ($file_error !== UPLOAD_ERR_OK) {
-    header('Location: content_upload.php?error=' . urlencode('File upload failed'));
+    $error_messages = [
+        UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize in php.ini',
+        UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE in HTML form',
+        UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+        UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+        UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+        UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+        UPLOAD_ERR_EXTENSION => 'PHP extension stopped the upload'
+    ];
+    $error_msg = $error_messages[$file_error] ?? 'Unknown upload error (Code: ' . $file_error . ')';
+    header('Location: content_upload.php?error=' . urlencode($error_msg));
     exit();
 }
 
-// Check file size (10MB limit)
-if ($file_size > 10 * 1024 * 1024) {
-    header('Location: content_upload.php?error=' . urlencode('File too large. Maximum 10MB allowed'));
+// Check file size (500MB limit for large training videos)
+if ($file_size > 500 * 1024 * 1024) {
+    header('Location: content_upload.php?error=' . urlencode('File too large. Maximum 500MB allowed'));
     exit();
 }
 
@@ -93,7 +103,7 @@ try {
     }
     
     // Determine organization_id (NULL for global content, org ID for org-specific)
-    $organization_id = ($_SESSION['role'] === 'admin') ? null : $_SESSION['organization_id'];
+    $organization_id = ($_SESSION['role'] === 'system_admin') ? null : $_SESSION['organization_id'];
     
     // Insert into database
     $stmt = $pdo->prepare("
