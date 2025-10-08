@@ -16,7 +16,6 @@ A web-based cybersecurity training platform for South African SMMEs with:
 ## Quick Start
 
 ```bash
-cd "f:\Semester Two\Governance\Project\GroupA_D2_2025_252IT28X80"
 php -S localhost:3000 -t src/ src/router.php
 ```
 
