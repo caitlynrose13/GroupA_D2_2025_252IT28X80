@@ -188,12 +188,23 @@ if ($content['file_path']) {
             <div class="content-header">
                 <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>
                 <div class="content-meta">
-                    <span class="meta-badge"><?php echo ucfirst($content['content_type']); ?></span>
-                    <span class="meta-badge"><?php echo strtoupper($content['file_type']); ?> File</span>
-                    <?php if ($content['cycle_number']): ?>
-                        <span class="meta-badge">Cycle <?php echo $content['cycle_number']; ?></span>
+                    <?php if (!empty($content['content_type_name'])): ?>
+                        <span class="meta-badge"><?php echo ucfirst($content['content_type_name']); ?></span>
                     <?php endif; ?>
-                    <?php if ($content['month_number']): ?>
+                    <?php 
+                    $file_ext = strtolower(pathinfo($content['file_path'], PATHINFO_EXTENSION));
+                    if ($file_ext): 
+                    ?>
+                        <span class="meta-badge"><?php echo strtoupper($file_ext); ?> File</span>
+                    <?php endif; ?>
+                    <?php if (!empty($content['month_number'])): 
+                        require_once __DIR__ . '/config/program_structure.php';
+                        $cycle_info = getCycleByMonth($content['month_number']);
+                        if ($cycle_info):
+                    ?>
+                        <span class="meta-badge">Cycle <?php echo $cycle_info['cycle_number']; ?></span>
+                    <?php endif; endif; ?>
+                    <?php if (!empty($content['month_number'])): ?>
                         <span class="meta-badge">Month <?php echo $content['month_number']; ?></span>
                     <?php endif; ?>
                 </div>
@@ -206,34 +217,53 @@ if ($content['file_path']) {
                 <?php if (isset($file_error)): ?>
                     <div class="error-message"><?php echo $file_error; ?></div>
                 <?php else: ?>
-                    <a href="download_content.php?id=<?php echo $content['id']; ?>" class="download-btn">Download File</a>
+                    <a href="download_content.php?id=<?php echo $content['id']; ?>" class="download-btn">📥 Download File</a>
                     
                     <div class="file-preview">
                         <?php
-                        $file_type = $content['file_type'];
+                        $file_type = strtolower(pathinfo($content['file_path'], PATHINFO_EXTENSION));
                         if (in_array($file_type, ['jpg', 'jpeg', 'png', 'gif'])):
                         ?>
-                            <img src="<?php echo htmlspecialchars($content['file_path']); ?>" alt="<?php echo htmlspecialchars($content['title']); ?>" style="max-width: 100%; height: auto;">
+                            <!-- Image Display -->
+                            <img src="<?php echo htmlspecialchars($content['file_path']); ?>" alt="<?php echo htmlspecialchars($content['title']); ?>" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        
                         <?php elseif ($file_type === 'pdf'): ?>
-                            <div class="file-icon">📄</div>
-                            <p>PDF Document</p>
-                            <p>Click download to view this PDF file.</p>
+                            <!-- PDF Viewer - Full Browser Display -->
+                            <div style="width: 100%; height: 800px; border: 2px solid #E07C42; border-radius: 8px; overflow: hidden;">
+                                <iframe src="pdf_viewer.php?id=<?php echo $content['id']; ?>" 
+                                        style="width: 100%; height: 100%; border: none;" 
+                                        title="<?php echo htmlspecialchars($content['title']); ?>">
+                                    <p>Your browser does not support PDF viewing. <a href="download_content.php?id=<?php echo $content['id']; ?>">Download the PDF</a> to view it.</p>
+                                </iframe>
+                            </div>
+                        
+                        <?php elseif (in_array($file_type, ['mp4', 'mov', 'avi', 'webm'])): ?>
+                            <!-- Video Player -->
+                            <video controls style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <source src="<?php echo htmlspecialchars($content['file_path']); ?>" type="video/<?php echo $file_type === 'mov' ? 'quicktime' : $file_type; ?>">
+                                Your browser does not support the video tag. <a href="download_content.php?id=<?php echo $content['id']; ?>">Download the video</a> instead.
+                            </video>
+                        
                         <?php elseif (in_array($file_type, ['doc', 'docx'])): ?>
+                            <!-- Word Document Preview -->
                             <div class="file-icon">📝</div>
-                            <p>Word Document</p>
-                            <p>Click download to view this document.</p>
+                            <p><strong>Word Document</strong></p>
+                            <p>Microsoft Word documents cannot be displayed in the browser.</p>
+                            <p>Please use the download button above to view this document.</p>
+                        
                         <?php elseif (in_array($file_type, ['ppt', 'pptx'])): ?>
+                            <!-- PowerPoint Preview -->
                             <div class="file-icon">📊</div>
-                            <p>PowerPoint Presentation</p>
-                            <p>Click download to view this presentation.</p>
-                        <?php elseif (in_array($file_type, ['mp4', 'mov', 'avi'])): ?>
-                            <div class="file-icon">🎥</div>
-                            <p>Video File</p>
-                            <p>Click download to view this video.</p>
+                            <p><strong>PowerPoint Presentation</strong></p>
+                            <p>PowerPoint presentations cannot be displayed in the browser.</p>
+                            <p>Please use the download button above to view this presentation.</p>
+                        
                         <?php else: ?>
+                            <!-- Generic File -->
                             <div class="file-icon">📁</div>
-                            <p><?php echo strtoupper($file_type); ?> File</p>
-                            <p>Click download to view this file.</p>
+                            <p><strong><?php echo strtoupper($file_type); ?> File</strong></p>
+                            <p>This file type cannot be previewed in the browser.</p>
+                            <p>Please use the download button above to view this file.</p>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

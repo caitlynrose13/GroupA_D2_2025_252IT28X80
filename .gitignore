@@ -1,0 +1,35 @@
+# PHP
+*.log
+composer.phar
+vendor/
+.phpunit.result.cache
+
+# Database backups and temporary files
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Replit
+.replit
+replit.nix
+.config/
+.cache/
+.upm/
+.breakpoints
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary upload files
+src/uploads/tmp/
+
+# Session files
+/tmp/

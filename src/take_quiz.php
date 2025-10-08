@@ -2,6 +2,7 @@
 // filepath: src/take_quiz.php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/config/program_structure.php';
 require_once __DIR__ . '/quiz_helper.php';
 
 // Check if user is logged in
@@ -273,7 +274,11 @@ try {
         <div class="quiz-info">
             <div class="quiz-title"><?php echo htmlspecialchars($quiz['title']); ?></div>
             <div class="quiz-meta">
-                <span class="meta-badge cycle">Cycle <?php echo $quiz['cycle_number']; ?></span>
+                <?php 
+                $cycle = getCycleByMonth($quiz['month_number']);
+                if ($cycle): ?>
+                    <span class="meta-badge cycle">Cycle <?php echo $cycle['cycle_number']; ?></span>
+                <?php endif; ?>
                 <?php if ($quiz['month_number']): ?>
                     <span class="meta-badge">Month <?php echo $quiz['month_number']; ?></span>
                 <?php endif; ?>
