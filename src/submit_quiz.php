@@ -9,6 +9,12 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     exit();
 }
 
+// Prevent admins from submitting quizzes
+if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
+    header('Location: quiz_list.php?error=' . urlencode('Administrators cannot submit quiz answers. You can only preview quizzes.'));
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: quiz_list.php');
     exit();

@@ -69,143 +69,50 @@ if ($content['file_path']) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($content['title']); ?> - South African SMME Cybersecurity Portal</title>
     <link rel="stylesheet" href="assets/webdesign-style.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background: #f5f7fa;
-        }
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { margin: 0; font-size: 24px; }
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .nav-links a:hover { background: rgba(255,255,255,0.1); }
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-        .content-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .content-header {
-            padding: 30px;
-            border-bottom: 1px solid #eee;
-        }
-        .content-title {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #2c3e50;
-        }
-        .content-meta {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .meta-badge {
-            background: #ecf0f1;
-            color: #555;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        .content-description {
-            color: #666;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        .content-viewer {
-            padding: 30px;
-        }
-        .download-btn {
-            background: #3498db;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            display: inline-block;
-        }
-        .download-btn:hover {
-            background: #2980b9;
-        }
-        .file-preview {
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 20px;
-            text-align: center;
-            background: #f9f9f9;
-        }
-        .file-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
-    <div class="african-header">
-        <div class="african-border"></div>
-        <div class="african-header-content">
+    <div class="african-border"></div>
+    <div class="header">
+        <div class="header-left">
             <h1>👁️ View Content</h1>
-            <p>Cybersecurity training material</p>
         </div>
-        <div class="african-nav-links">
-            <a href="dashboard.php">Dashboard</a>
-            <a href="content_list.php">Back to Library</a>
-            <a href="logout.php">Logout</a>
+        <div class="header-right">
+            <div class="nav-links">
+                <a href="dashboard.php">Dashboard</a>
+                <a href="content_list.php">Back to Library</a>
+                <a href="logout.php">Logout</a>
+            </div>
         </div>
     </div>
     
-    <div class="african-container">
+    <div class="container">
         <div class="content-card">
             <div class="content-header">
-                <div class="content-title"><?php echo htmlspecialchars($content['title']); ?></div>
-                <div class="content-meta">
+                <h1 class="content-title"><?php echo htmlspecialchars($content['title']); ?></h1>
+                <div class="content-badges">
                     <?php if (!empty($content['content_type_name'])): ?>
-                        <span class="meta-badge"><?php echo ucfirst($content['content_type_name']); ?></span>
+                        <span class="badge badge-type"><?php echo ucfirst($content['content_type_name']); ?></span>
                     <?php endif; ?>
                     <?php 
                     $file_ext = strtolower(pathinfo($content['file_path'], PATHINFO_EXTENSION));
                     if ($file_ext): 
                     ?>
-                        <span class="meta-badge"><?php echo strtoupper($file_ext); ?> File</span>
+                        <span class="badge badge-type"><?php echo strtoupper($file_ext); ?> File</span>
                     <?php endif; ?>
                     <?php if (!empty($content['month_number'])): 
                         require_once __DIR__ . '/config/program_structure.php';
                         $cycle_info = getCycleByMonth($content['month_number']);
                         if ($cycle_info):
                     ?>
-                        <span class="meta-badge">Cycle <?php echo $cycle_info['cycle_number']; ?></span>
+                        <span class="badge badge-month">Cycle <?php echo $cycle_info['cycle_number']; ?></span>
                     <?php endif; endif; ?>
                     <?php if (!empty($content['month_number'])): ?>
-                        <span class="meta-badge">Month <?php echo $content['month_number']; ?></span>
+                        <span class="badge badge-month">Month <?php echo $content['month_number']; ?></span>
+                    <?php endif; ?>
+                    <?php if (empty($content['organization_id'])): ?>
+                        <span class="badge badge-global">Global Content</span>
+                    <?php elseif (!empty($content['organization_name'])): ?>
+                        <span class="badge badge-org"><?php echo htmlspecialchars($content['organization_name']); ?></span>
                     <?php endif; ?>
                 </div>
                 <?php if ($content['description']): ?>
@@ -215,9 +122,9 @@ if ($content['file_path']) {
             
             <div class="content-viewer">
                 <?php if (isset($file_error)): ?>
-                    <div class="error-message"><?php echo $file_error; ?></div>
+                    <div class="message error"><?php echo $file_error; ?></div>
                 <?php else: ?>
-                    <a href="download_content.php?id=<?php echo $content['id']; ?>" class="download-btn">📥 Download File</a>
+                    <a href="download_content.php?id=<?php echo $content['id']; ?>" class="btn-primary download-btn">📥 Download File</a>
                     
                     <div class="file-preview">
                         <?php
@@ -225,45 +132,56 @@ if ($content['file_path']) {
                         if (in_array($file_type, ['jpg', 'jpeg', 'png', 'gif'])):
                         ?>
                             <!-- Image Display -->
-                            <img src="<?php echo htmlspecialchars($content['file_path']); ?>" alt="<?php echo htmlspecialchars($content['title']); ?>" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <img src="<?php echo htmlspecialchars($content['file_path']); ?>" 
+                                 alt="<?php echo htmlspecialchars($content['title']); ?>" 
+                                 style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         
                         <?php elseif ($file_type === 'pdf'): ?>
                             <!-- PDF Viewer - Full Browser Display -->
-                            <div style="width: 100%; height: 800px; border: 2px solid #E07C42; border-radius: 8px; overflow: hidden;">
+                            <div class="pdf-viewer-container">
                                 <iframe src="pdf_viewer.php?id=<?php echo $content['id']; ?>" 
-                                        style="width: 100%; height: 100%; border: none;" 
                                         title="<?php echo htmlspecialchars($content['title']); ?>">
-                                    <p>Your browser does not support PDF viewing. <a href="download_content.php?id=<?php echo $content['id']; ?>">Download the PDF</a> to view it.</p>
+                                    <p>Your browser does not support PDF viewing. 
+                                       <a href="download_content.php?id=<?php echo $content['id']; ?>" class="african-link">Download the PDF</a> 
+                                       to view it.</p>
                                 </iframe>
                             </div>
                         
                         <?php elseif (in_array($file_type, ['mp4', 'mov', 'avi', 'webm'])): ?>
                             <!-- Video Player -->
-                            <video controls style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <source src="<?php echo htmlspecialchars($content['file_path']); ?>" type="video/<?php echo $file_type === 'mov' ? 'quicktime' : $file_type; ?>">
-                                Your browser does not support the video tag. <a href="download_content.php?id=<?php echo $content['id']; ?>">Download the video</a> instead.
+                            <video controls class="video-player">
+                                <source src="<?php echo htmlspecialchars($content['file_path']); ?>" 
+                                        type="video/<?php echo $file_type === 'mov' ? 'quicktime' : $file_type; ?>">
+                                Your browser does not support the video tag. 
+                                <a href="download_content.php?id=<?php echo $content['id']; ?>" class="african-link">Download the video</a> instead.
                             </video>
                         
                         <?php elseif (in_array($file_type, ['doc', 'docx'])): ?>
                             <!-- Word Document Preview -->
-                            <div class="file-icon">📝</div>
-                            <p><strong>Word Document</strong></p>
-                            <p>Microsoft Word documents cannot be displayed in the browser.</p>
-                            <p>Please use the download button above to view this document.</p>
+                            <div class="file-preview-message">
+                                <div class="file-icon">📝</div>
+                                <h3>Word Document</h3>
+                                <p>Microsoft Word documents cannot be displayed in the browser.</p>
+                                <p>Please use the download button above to view this document.</p>
+                            </div>
                         
                         <?php elseif (in_array($file_type, ['ppt', 'pptx'])): ?>
                             <!-- PowerPoint Preview -->
-                            <div class="file-icon">📊</div>
-                            <p><strong>PowerPoint Presentation</strong></p>
-                            <p>PowerPoint presentations cannot be displayed in the browser.</p>
-                            <p>Please use the download button above to view this presentation.</p>
+                            <div class="file-preview-message">
+                                <div class="file-icon">📊</div>
+                                <h3>PowerPoint Presentation</h3>
+                                <p>PowerPoint presentations cannot be displayed in the browser.</p>
+                                <p>Please use the download button above to view this presentation.</p>
+                            </div>
                         
                         <?php else: ?>
                             <!-- Generic File -->
-                            <div class="file-icon">📁</div>
-                            <p><strong><?php echo strtoupper($file_type); ?> File</strong></p>
-                            <p>This file type cannot be previewed in the browser.</p>
-                            <p>Please use the download button above to view this file.</p>
+                            <div class="file-preview-message">
+                                <div class="file-icon">📁</div>
+                                <h3><?php echo strtoupper($file_type); ?> File</h3>
+                                <p>This file type cannot be previewed in the browser.</p>
+                                <p>Please use the download button above to view this file.</p>
+                            </div>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
