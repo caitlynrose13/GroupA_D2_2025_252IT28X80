@@ -25,17 +25,15 @@ if ($_SESSION['organization_id']) {
 }
 
 // Get some basic stats for the dashboard
-// Beverley: Enhanced statistics with role-based user counting
 $content_count = 0;
 $quiz_count = 0;
-$user_count = 0; // New statistic for Admins - shows organizational oversight capability
+$user_count = 0;
 
 try {
     $role = $_SESSION['role'];
     $org_id = $_SESSION['organization_id'];
 
-    // Beverley: Improved role-based security logic
-    // Define WHERE clause and parameters based on role for better code maintainability
+    // Define WHERE clause and parameters based on role
     if ($role === 'system_admin') {
         $content_where = '1=1';
         $user_where = '1=1';
@@ -61,8 +59,7 @@ try {
     $quiz_stmt->execute($content_params);
     $quiz_count = $quiz_stmt->fetchColumn();
 
-    // Beverley: Enhanced user management statistics for administrators
-    // Count users (only for admins) - provides organizational oversight
+    // Count users for administrators
     if (in_array($role, ['system_admin', 'org_admin'])) {
         $user_stmt = $pdo->prepare("SELECT COUNT(*) as count FROM users WHERE is_active = 1 AND $user_where");
         $user_stmt->execute($user_params);
@@ -70,8 +67,7 @@ try {
     }
     
 } catch (PDOException $e) {
-    // Beverley: Better error handling with proper logging
-    // Log error, but keep counts at 0 for a clean dashboard display
+    // Log error but maintain clean dashboard display
     error_log("Dashboard DB Error: " . $e->getMessage());
 }
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-A comprehensive web-based platform for South African SMMEs to manage a 12-month cybersecurity awareness programme. Built with PHP and SQLite with an African-inspired design theme.
+A comprehensive web-based platform for South African SMMEs to manage a 12-month cybersecurity awareness programme. Built with PHP and SQLite featuring an African-inspired design theme.
 
 ## Key Features
 
@@ -30,53 +30,63 @@ A comprehensive web-based platform for South African SMMEs to manage a 12-month 
   - Complete data isolation between organizations
   - Organization-specific analytics and reporting
 
-## Current Implementation Status
-
-### ✅ **Fully Complete:**
-
-- User authentication and role-based access control
-- Quiz creation, taking, and results system
-- Content upload and management system
-- Organization admin approval workflow
-- African-themed responsive UI/UX design
-- Multi-tenant data isolation
-- Comprehensive dashboard analytics
-
-### 🔧 **Final Polish Needed:**
-
-- Minor styling refinements
-- Additional test data and documentation
-- Final integration testing
-
 ## Quick Start
 
 1. **Start Server:**
 
    ```bash
-   php -S localhost:8000 -t src/
+   php -S localhost:8000 -t src/ src/router.php
    ```
 
 2. **Access System:**
    Navigate to `http://localhost:8000/login.php`
 
-3. **Test Accounts:**
-   - System Admin: `admin@platform.com` / `password123`
-   - Org Admin: `admin@techcorp.co.za` / `password123`
-   - Employee: `employee@techcorp.co.za` / `password123`
+3. **Demo Accounts:**
+   All passwords: `password123`
+
+   **System Administrator:**
+
+   - Email: `admin@platform.com`
+
+   **Organization Admins:**
+
+   - TechCorp: `admin@techcorp.co.za`
+   - SafeGuard: `admin@safeguard.co.za`
+   - DataSecure: `admin@datasecure.co.za`
+
+   **Employees:**
+
+   - TechCorp: `employee@techcorp.co.za`
+   - SafeGuard: `lisa@safeguard.co.za`
+   - DataSecure: `alex@datasecure.co.za`
 
 ## File Structure
 
 ```
 GroupA_D2_2025_252IT28X80/
 ├── src/                    # Complete PHP application
+│   ├── config/             # Database and program configuration
+│   │   ├── db.php         # Database connection
+│   │   └── program_structure.php # 12-month program constants
+│   ├── assets/             # African-themed CSS and design
+│   │   └── webdesign-style.css
+│   ├── uploads/            # User-uploaded content
+│   │   ├── documents/
+│   │   └── images/
 │   ├── quiz_create.php     # Quiz creation interface
-│   ├── quiz_take.php       # Quiz taking with timer
+│   ├── take_quiz.php       # Quiz taking with timer
 │   ├── quiz_results.php    # Results and analytics
 │   ├── content_upload.php  # Content management
 │   ├── user_management.php # User approval system
-│   └── assets/             # African-themed CSS
+│   ├── router.php          # Custom router for query parameters
+│   └── *.php              # Other application files
 ├── database/               # SQLite schema and data
-└── README.md              # This file
+│   ├── app.db             # SQLite database (20 tables)
+│   ├── schema.sql         # Database schema
+│   ├── seed_data.sql      # Test data
+│   └── README.md          # Database documentation
+├── docs/                   # Additional documentation
+├── README.md              # This file
 ```
 
 ## 12-Month Programme Implementation
@@ -89,16 +99,27 @@ The system supports a structured 12-month cybersecurity awareness programme:
 
 Each cycle includes content delivery, interactive learning, and assessment components.
 
-## Deliverables
+## Technology Stack
 
-- ✅ Complete functional codebase
-- ✅ SQLite database with test data
-- ✅ African-inspired responsive UI
-- ✅ Multi-tenant architecture
-- 📋 Final documentation and demonstration
+- **Backend:** PHP 8.2 with PDO
+- **Database:** SQLite 3 (20 tables, multi-tenant architecture)
+- **Frontend:** HTML5/CSS3 with African-inspired theme
+- **Security:** Password hashing, role-based access control, multi-tenant isolation
+- **Features:** 4 Organizations, 13+ users across 3 roles
+
+## Key Features
+
+✅ User authentication with password hashing  
+✅ Role-based dashboard and access control  
+✅ Quiz creation and management system  
+✅ Content upload and categorization  
+✅ Organization admin approval workflow  
+✅ Employee progress tracking  
+✅ Analytics and reporting  
+✅ African-themed responsive UI  
+✅ Multi-tenant data isolation  
+✅ 12-month structured programme cycles
 
 ---
 
-**Project Status:** Implementation Complete - Ready for Demonstration  
-**Technology Stack:** PHP 8.0+, SQLite, HTML5/CSS3  
-**Demonstration:** 20-minute presentation ready
+**Demonstration:** Ready for presentation
