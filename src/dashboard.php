@@ -82,6 +82,14 @@ $error = $_GET['error'] ?? '';
     <title>Dashboard - SA SMME Cybersecurity Platform</title>
     <!-- African-Inspired Styling -->
     <link rel="stylesheet" href="assets/webdesign-style.css">
+    <style>
+        .stat-note {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
     <!-- Pattern Border -->
@@ -97,6 +105,7 @@ $error = $_GET['error'] ?? '';
                 <a href="quiz_list.php">Quizzes</a>
                 <?php if ($_SESSION['role'] === 'system_admin'): ?>
                     <a href="organization_management.php">Organizations</a>
+                    <a href="user_management.php">Users</a>
                 <?php elseif ($_SESSION['role'] === 'org_admin'): ?>
                     <a href="user_management.php">Users</a>
                     <a href="reporting.php">Reports</a>
@@ -117,72 +126,116 @@ $error = $_GET['error'] ?? '';
             <div class="message error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
-        <div class="welcome-card">
-            <?php 
-                // Beverley: Dynamic role-based welcome messages
-                // Provides personalized, context-aware dashboard experience
-                $role = $_SESSION['role'];
-                $welcome_message = "Welcome back, " . htmlspecialchars($_SESSION['first_name']);
-
-                if ($role === 'system_admin') {
-                    $welcome_message = "System Administrator Dashboard";
-                } elseif ($role === 'org_admin') {
-                    $welcome_message = "Organization Administrator Dashboard";
-                } elseif ($role === 'employee') {
-                    $welcome_message = "Your Learning Dashboard";
-                }
-            ?>
-            <h2><?php echo $welcome_message; ?></h2>
-            <p><strong>Username:</strong> <?php echo htmlspecialchars($_SESSION['username']); ?></p>
-            <p><strong>Email:</strong> <?php echo htmlspecialchars($_SESSION['email']); ?></p>
-            <p><strong>Role:</strong> <?php echo ucwords(str_replace('_', ' ', $_SESSION['role'])); ?></p>
-            <?php if ($organization_name): ?>
-                <p><strong>Organization:</strong> <?php echo htmlspecialchars($organization_name); ?></p>
-            <?php else: ?>
-                <p><strong>Access Level:</strong> Platform Administrator</p>
-            <?php endif; ?>
-        </div>
-
-        <!-- Beverley: Role-based statistics display -->
+        <!-- Role-based statistics display -->
         <!-- Provides relevant metrics for each user type -->
         <?php if ($role === 'employee'): ?>
             <?php
-                // Get realistic employee progress data from database
-                $modules_completed = 0;
+                // Get REAL employee progress data based on actual interactions
+                $content_accessed = 0;
+                $quizzes_passed = 0;
+                $total_quizzes = 0;
+                $months_completed = 0;
                 $avg_quiz_score = 0;
+                
                 try {
-                    // Check employee progress for current user
-                    $progress_stmt = $pdo->prepare("SELECT COUNT(*) as completed FROM employee_progress WHERE user_id = :user_id AND completion_percentage >= 100");
-                    $progress_stmt->execute(['user_id' => $_SESSION['user_id']]);
-                    $modules_completed = $progress_stmt->fetchColumn();
+                    // Count unique content pieces accessed (viewed or downloaded)
+                    $content_stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT content_id) as count 
+                        FROM content_access_logs 
+                        WHERE user_id = :user_id
+                    ");
+                    $content_stmt->execute(['user_id' => $_SESSION['user_id']]);
+                    $content_accessed = $content_stmt->fetchColumn() ?: 0;
                     
-                    // Get average quiz score for current user
-                    $score_stmt = $pdo->prepare("SELECT AVG(percentage) as avg_score FROM quiz_results WHERE user_id = :user_id");
-                    $score_stmt->execute(['user_id' => $_SESSION['user_id']]);
+                    // Count total available quizzes for this user
+                    $total_quiz_stmt = $pdo->prepare("
+                        SELECT COUNT(*) as count 
+                        FROM quizzes q
+                        WHERE (q.organization_id IS NULL OR q.organization_id = :org_id)
+                    ");
+                    $total_quiz_stmt->execute(['org_id' => $_SESSION['organization_id']]);
+                    $total_quizzes = $total_quiz_stmt->fetchColumn() ?: 0;
+                    
+                    // Count UNIQUE quizzes passed (only count each quiz once, even if passed multiple times)
+                    $quiz_stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT qr.quiz_id) as count 
+                        FROM quiz_results qr 
+                        JOIN quizzes q ON qr.quiz_id = q.id 
+                        WHERE qr.user_id = :user_id AND qr.passed = 1
+                        AND (q.organization_id IS NULL OR q.organization_id = :org_id)
+                    ");
+                    $quiz_stmt->execute(['user_id' => $_SESSION['user_id'], 'org_id' => $_SESSION['organization_id']]);
+                    $quizzes_passed = $quiz_stmt->fetchColumn() ?: 0;
+                    
+                    // Get average quiz score for passed quizzes (best attempt per quiz)
+                    $score_stmt = $pdo->prepare("
+                        SELECT AVG(best_scores.max_percentage) as avg_score 
+                        FROM (
+                            SELECT qr.quiz_id, MAX(qr.percentage) as max_percentage
+                            FROM quiz_results qr
+                            JOIN quizzes q ON qr.quiz_id = q.id
+                            WHERE qr.user_id = :user_id AND qr.passed = 1
+                            AND (q.organization_id IS NULL OR q.organization_id = :org_id)
+                            GROUP BY qr.quiz_id
+                        ) best_scores
+                    ");
+                    $score_stmt->execute(['user_id' => $_SESSION['user_id'], 'org_id' => $_SESSION['organization_id']]);
                     $avg_score_result = $score_stmt->fetch();
-                    $avg_quiz_score = $avg_score_result ? round($avg_score_result['avg_score'], 0) : 0;
+                    $avg_quiz_score = $avg_score_result && $avg_score_result['avg_score'] ? round($avg_score_result['avg_score'], 0) : 0;
+                    
+                    // Calculate months completed based on REAL criteria:
+                    // A month is "completed" if user has:
+                    // 1. Accessed the content for that month AND
+                    // 2. For assessment months (4,8,12): passed the quiz
+                    // 3. For content months: just accessed the content
+                    
+                    $months_completed_stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT c.month_number) as completed_months
+                        FROM content c
+                        JOIN content_access_logs cal ON c.id = cal.content_id
+                        WHERE cal.user_id = :user_id 
+                        AND c.month_number IS NOT NULL
+                        AND (
+                            -- For assessment months, user must have passed the quiz
+                            (c.month_number IN (4, 8, 12) AND EXISTS (
+                                SELECT 1 FROM quiz_results qr 
+                                JOIN quizzes q ON qr.quiz_id = q.id 
+                                WHERE qr.user_id = :user_id 
+                                AND q.month_number = c.month_number 
+                                AND qr.passed = 1
+                            ))
+                            OR
+                            -- For content months, just need to access content
+                            (c.month_number NOT IN (4, 8, 12))
+                        )
+                    ");
+                    $months_completed_stmt->execute(['user_id' => $_SESSION['user_id']]);
+                    $months_completed = $months_completed_stmt->fetchColumn() ?: 0;
+                    
                 } catch (PDOException $e) {
-                    // Fallback to demo data if queries fail
-                    $modules_completed = 2;
-                    $avg_quiz_score = 78;
+                    // Keep zeros as fallback values
+                    error_log("Dashboard progress error: " . $e->getMessage());
                 }
             ?>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-number"><?php echo $content_count; ?></div>
-                    <div class="stat-label">Available Content</div>
+                    <div class="stat-number"><?php echo $content_accessed; ?>/<?php echo $content_count; ?></div>
+                    <div class="stat-label">Content Accessed</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number"><?php echo $modules_completed; ?>/12</div>
-                    <div class="stat-label">Modules Completed</div>
+                    <div class="stat-number"><?php echo $months_completed; ?>/12</div>
+                    <div class="stat-label">Months Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $quizzes_passed; ?>/<?php echo $total_quizzes; ?></div>
+                    <div class="stat-label">Quizzes Passed</div>
+                    <?php if ($total_quizzes > $quizzes_passed): ?>
+                        <div class="stat-note"><?php echo $total_quizzes - $quizzes_passed; ?> remaining</div>
+                    <?php endif; ?>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number"><?php echo $avg_quiz_score; ?>%</div>
-                    <div class="stat-label">Average Quiz Score</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number"><?php echo $quiz_count; ?></div>
-                    <div class="stat-label">Available Quizzes</div>
+                    <div class="stat-label">Best Quiz Average</div>
                 </div>
             </div>
 
@@ -208,15 +261,56 @@ $error = $_GET['error'] ?? '';
                     </div>
                 <?php else: ?>
                     <?php
-                        // Get realistic completion rate for organization
-                        $completion_rate = 65; // Default fallback
+                        // Get REALISTIC completion rate for organization based on actual interactions
+                        $completion_rate = 0;
                         try {
-                            $comp_stmt = $pdo->prepare("SELECT AVG(completion_percentage) as avg_completion FROM employee_progress ep JOIN users u ON ep.user_id = u.id WHERE u.organization_id = :org_id");
+                            // Calculate average completion rate based on real employee interactions
+                            // For each employee: (content_accessed + quizzes_passed) / (total_content + total_quizzes) * 100
+                            $comp_stmt = $pdo->prepare("
+                                SELECT 
+                                    AVG(
+                                        CASE 
+                                            WHEN total_available > 0 THEN 
+                                                ((content_accessed + quizzes_passed) * 100.0 / total_available)
+                                            ELSE 0 
+                                        END
+                                    ) as avg_completion
+                                FROM (
+                                    SELECT 
+                                        u.id,
+                                        COALESCE(content_accessed.count, 0) as content_accessed,
+                                        COALESCE(quizzes_passed.count, 0) as quizzes_passed,
+                                        (
+                                            SELECT COUNT(*) FROM content WHERE (organization_id IS NULL OR organization_id = :org_id) AND is_active = 1
+                                        ) + (
+                                            SELECT COUNT(*) FROM quizzes WHERE (organization_id IS NULL OR organization_id = :org_id)
+                                        ) as total_available
+                                    FROM users u
+                                    LEFT JOIN (
+                                        SELECT user_id, COUNT(DISTINCT content_id) as count
+                                        FROM content_access_logs cal
+                                        JOIN content c ON cal.content_id = c.id
+                                        WHERE (c.organization_id IS NULL OR c.organization_id = :org_id)
+                                        GROUP BY user_id
+                                    ) content_accessed ON u.id = content_accessed.user_id
+                                    LEFT JOIN (
+                                        SELECT user_id, COUNT(*) as count
+                                        FROM quiz_results qr
+                                        JOIN quizzes q ON qr.quiz_id = q.id
+                                        WHERE qr.passed = 1 AND (q.organization_id IS NULL OR q.organization_id = :org_id)
+                                        GROUP BY user_id
+                                    ) quizzes_passed ON u.id = quizzes_passed.user_id
+                                    WHERE u.organization_id = :org_id 
+                                    AND u.is_active = 1 
+                                    AND u.role_id = (SELECT id FROM roles WHERE name = 'employee')
+                                ) employee_progress
+                            ");
                             $comp_stmt->execute(['org_id' => $_SESSION['organization_id']]);
                             $comp_result = $comp_stmt->fetch();
-                            $completion_rate = $comp_result ? round($comp_result['avg_completion'], 0) : 65;
+                            $completion_rate = $comp_result && $comp_result['avg_completion'] ? round($comp_result['avg_completion'], 0) : 0;
                         } catch (PDOException $e) {
-                            // Keep default value
+                            error_log("Org completion rate error: " . $e->getMessage());
+                            $completion_rate = 0;
                         }
                     ?>
                     <div class="stat-card">

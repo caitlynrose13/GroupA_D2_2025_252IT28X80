@@ -102,22 +102,38 @@ if (!empty($filter_cycle)) {
 $where_clause = implode(' AND ', $where_conditions);
 
 try {
-    // Get quizzes with question count and organization info
+    // Get quizzes with question count, organization info, and user completion status
     $stmt = $pdo->prepare("
         SELECT q.*, 
                COUNT(DISTINCT qq.id) as question_count,
                COUNT(DISTINCT qr.id) as attempts_count,
                o.name as organization_name,
-               qs.name as status_name
+               qs.name as status_name,
+               user_results.best_score,
+               user_results.attempts_by_user,
+               user_results.completed,
+               user_results.last_attempt_date
         FROM quizzes q 
         LEFT JOIN quiz_questions qq ON q.id = qq.quiz_id
         LEFT JOIN quiz_results qr ON q.id = qr.quiz_id
         LEFT JOIN organizations o ON q.organization_id = o.id
         LEFT JOIN quiz_statuses qs ON q.status_id = qs.id
+        LEFT JOIN (
+            SELECT 
+                quiz_id,
+                MAX(score) as best_score,
+                COUNT(*) as attempts_by_user,
+                MAX(CASE WHEN score >= (SELECT passing_score FROM quizzes WHERE id = quiz_id) THEN 1 ELSE 0 END) as completed,
+                MAX(completed_at) as last_attempt_date
+            FROM quiz_results 
+            WHERE user_id = :current_user_id
+            GROUP BY quiz_id
+        ) user_results ON q.id = user_results.quiz_id
         WHERE $where_clause 
         GROUP BY q.id
         ORDER BY q.month_number ASC, q.created_at DESC
     ");
+    $params['current_user_id'] = $_SESSION['user_id'];
     $stmt->execute($params);
     $quiz_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -230,9 +246,17 @@ $error = $_GET['error'] ?? $error ?? '';
         <?php else: ?>
             <div class="quiz-grid">
                 <?php foreach ($quiz_list as $quiz): ?>
-                    <div class="quiz-card">
+                    <div class="quiz-card <?php echo $quiz['completed'] ? 'quiz-completed' : 'quiz-incomplete'; ?>">
                         <div class="quiz-header">
-                            <h3><?php echo htmlspecialchars($quiz['title']); ?></h3>
+                            <div class="quiz-title-row">
+                                <h3><?php echo htmlspecialchars($quiz['title']); ?></h3>
+                                <?php if ($quiz['completed']): ?>
+                                    <span class="completion-indicator completed" title="Quiz Completed">✓</span>
+                                <?php else: ?>
+                                    <span class="completion-indicator incomplete" title="Quiz Not Completed">○</span>
+                                <?php endif; ?>
+                            </div>
+                            
                             <div class="quiz-badges">
                                 <?php if ($quiz['month_number']): ?>
                                     <span class="badge badge-month">Month <?php echo $quiz['month_number']; ?></span>
@@ -270,12 +294,45 @@ $error = $_GET['error'] ?? $error ?? '';
                             <div class="quiz-meta">
                                 <span>Passing Score: <?php echo $quiz['passing_score']; ?>%</span>
                                 <?php if ($quiz['attempts_count'] > 0): ?>
-                                    <span><?php echo $quiz['attempts_count']; ?> attempts</span>
+                                    <span><?php echo $quiz['attempts_count']; ?> total attempts</span>
                                 <?php endif; ?>
                                 <?php if ($quiz['time_limit_minutes']): ?>
                                     <span><?php echo $quiz['time_limit_minutes']; ?> minutes</span>
                                 <?php endif; ?>
                             </div>
+                            
+                            <!-- User Progress Section -->
+                            <?php if ($quiz['attempts_by_user'] > 0): ?>
+                                <div class="user-progress">
+                                    <div class="progress-row">
+                                        <span class="progress-label">Your Progress:</span>
+                                        <span class="progress-details">
+                                            <?php if ($quiz['completed']): ?>
+                                                <strong style="color: #27ae60;">✓ Completed</strong> - Best Score: <?php echo $quiz['best_score']; ?>%
+                                            <?php else: ?>
+                                                <strong style="color: #e74c3c;">Incomplete</strong> - Best Score: <?php echo $quiz['best_score']; ?>%
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                    <div class="progress-row">
+                                        <span class="progress-label">Attempts:</span>
+                                        <span><?php echo $quiz['attempts_by_user']; ?></span>
+                                    </div>
+                                    <?php if ($quiz['last_attempt_date']): ?>
+                                        <div class="progress-row">
+                                            <span class="progress-label">Last Attempt:</span>
+                                            <span><?php echo date('M j, Y', strtotime($quiz['last_attempt_date'])); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="user-progress">
+                                    <div class="progress-row">
+                                        <span class="progress-label">Status:</span>
+                                        <span class="not-attempted">Not Started</span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         
                         <div class="quiz-actions">
@@ -288,7 +345,15 @@ $error = $_GET['error'] ?? $error ?? '';
                                     Delete
                                 </a>
                             <?php else: ?>
-                                <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="btn-primary">Take Quiz</a>
+                                <?php if ($quiz['completed']): ?>
+                                    <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="btn-secondary">Retake Quiz</a>
+                                    <a href="quiz_results.php?id=<?php echo $quiz['id']; ?>" class="btn-primary">View Results</a>
+                                <?php elseif ($quiz['attempts_by_user'] > 0): ?>
+                                    <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="btn-primary">Continue Quiz</a>
+                                    <a href="quiz_results.php?id=<?php echo $quiz['id']; ?>" class="btn-secondary">View Attempts</a>
+                                <?php else: ?>
+                                    <a href="take_quiz.php?id=<?php echo $quiz['id']; ?>" class="btn-primary">Start Quiz</a>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>

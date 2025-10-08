@@ -24,6 +24,25 @@ try {
         header('Location: content_list.php?error=' . urlencode('Content not found'));
         exit();
     }
+    
+    // Log content access for tracking
+    try {
+        $access_stmt = $pdo->prepare("
+            INSERT INTO content_access_logs (user_id, content_id, access_type, ip_address, user_agent, accessed_at)
+            VALUES (:user_id, :content_id, 'download', :ip_address, :user_agent, :accessed_at)
+        ");
+        $access_stmt->execute([
+            'user_id' => $_SESSION['user_id'],
+            'content_id' => $content_id,
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            'accessed_at' => date('Y-m-d H:i:s')
+        ]);
+    } catch (PDOException $e) {
+        // Log error but don't prevent download
+        error_log("Error logging content access: " . $e->getMessage());
+    }
+    
 } catch (PDOException $e) {
     header('Location: content_list.php?error=' . urlencode('Error loading content'));
     exit();

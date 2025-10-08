@@ -70,277 +70,370 @@ if (isset($_SESSION['quiz_results'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Results - <?php echo htmlspecialchars($results['quiz_title']); ?> - South African SMME Cybersecurity Portal</title>
+    <title>Quiz Results - <?php echo htmlspecialchars($results['quiz_title']); ?> - SA SMME Cybersecurity Platform</title>
     <link rel="stylesheet" href="assets/webdesign-style.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            background: #f5f7fa;
-        }
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { margin: 0; font-size: 24px; }
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            padding: 8px 16px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-        .nav-links a:hover { background: rgba(255,255,255,0.1); }
-        .container {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-        }
         .results-card {
             background: white;
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             text-align: center;
             margin-bottom: 30px;
+            border: 1px solid #e9ecef;
         }
+        
         .result-icon {
             font-size: 80px;
             margin-bottom: 20px;
         }
+        
         .passed {
-            color: #27ae60;
+            color: #28a745;
         }
+        
         .failed {
-            color: #e74c3c;
+            color: #dc3545;
         }
+        
         .result-title {
-            font-size: 36px;
-            font-weight: 600;
+            font-size: 2.5em;
+            font-weight: 700;
             margin-bottom: 10px;
+            color: var(--primary-dark);
         }
+        
         .result-subtitle {
-            font-size: 18px;
-            color: #666;
+            font-size: 1.2em;
+            color: var(--text-medium);
             margin-bottom: 30px;
         }
+        
         .score-display {
-            font-size: 48px;
+            font-size: 3.5em;
             font-weight: 700;
             margin-bottom: 20px;
         }
+        
         .score-details {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 20px;
             margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
         }
+        
         .score-item {
             text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--light-cream), var(--cream-bg));
+            border-radius: 8px;
+            border: 1px solid rgba(212, 98, 26, 0.1);
         }
+        
         .score-number {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2c3e50;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 5px;
         }
+        
         .score-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
+            font-size: 0.9em;
+            color: var(--text-medium);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        
         .passing-info {
-            background: #f8f9fa;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+            font-size: 1.1em;
         }
+        
         .question-review {
             background: white;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-bottom: 30px;
+            border: 1px solid #e9ecef;
         }
+        
+        .question-review h3 {
+            color: var(--primary-dark);
+            border-bottom: 2px solid var(--light-cream);
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+            font-size: 1.3em;
+        }
+        
         .question-item {
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #f1f3f4;
             padding: 20px 0;
         }
+        
         .question-item:last-child {
             border-bottom: none;
         }
+        
         .question-text {
-            font-weight: 500;
+            font-weight: 600;
             margin-bottom: 15px;
-            color: #2c3e50;
+            color: var(--primary-dark);
+            font-size: 1.1em;
         }
+        
         .answer-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
+        
         .answer-correct {
-            color: #27ae60;
+            color: #28a745;
+            font-weight: 600;
         }
+        
         .answer-incorrect {
-            color: #e74c3c;
+            color: #dc3545;
+            font-weight: 600;
         }
+        
         .explanation-box {
-            background: #f0f9ff;
-            border-left: 4px solid #3498db;
-            padding: 12px 15px;
-            margin-top: 10px;
-            border-radius: 4px;
+            background: linear-gradient(135deg, #e3f2fd, #f0f9ff);
+            border-left: 4px solid var(--accent-gold);
+            padding: 15px 20px;
+            margin-top: 15px;
+            border-radius: 6px;
         }
+        
         .explanation-label {
             font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 5px;
+            color: var(--primary-dark);
+            margin-bottom: 8px;
             display: block;
         }
+        
         .explanation-text {
-            color: #555;
-            line-height: 1.5;
+            color: var(--text-dark);
+            line-height: 1.6;
         }
+        
         .actions {
             display: flex;
             gap: 15px;
             justify-content: center;
+            flex-wrap: wrap;
         }
+        
         .btn {
             padding: 12px 24px;
             border: none;
             border-radius: 6px;
             text-decoration: none;
-            font-size: 16px;
-            font-weight: 500;
+            font-size: 1em;
+            font-weight: 600;
             cursor: pointer;
             text-align: center;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+        
         .btn-primary {
-            background: #3498db;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-medium));
             color: white;
         }
-        .btn-primary:hover { background: #2980b9; }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-medium), var(--primary-dark));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
         .btn-success {
-            background: #27ae60;
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
         }
-        .btn-success:hover { background: #219a52; }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #20c997, #28a745);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+        
         .btn-secondary {
-            background: #95a5a6;
+            background: linear-gradient(135deg, #6c757d, #5a6268);
             color: white;
         }
-        .btn-secondary:hover { background: #7f8c8d; }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268, #6c757d);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .results-card {
+                padding: 25px;
+            }
+            
+            .score-display {
+                font-size: 2.5em;
+            }
+            
+            .result-title {
+                font-size: 2em;
+            }
+            
+            .score-details {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            .answer-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="african-header">
-        <div class="african-border"></div>
-        <div class="african-header-content">
-            <h1>📊 Quiz Results</h1>
-            <p>Your cybersecurity assessment results</p>
+    <!-- Pattern Border -->
+    <div class="african-border"></div>
+    
+    <div class="header">
+        <div class="header-left">
+            <h1>SA SMME Cybersecurity Platform</h1>
         </div>
-        <div class="african-nav-links">
-            <a href="dashboard.php">Dashboard</a>
-            <a href="quiz_list.php">Quiz Library</a>
-            <a href="logout.php">Logout</a>
+        <div class="header-right">
+            <nav class="nav-links">
+                <a href="dashboard.php">Dashboard</a>
+                <a href="content_list.php">Content</a>
+                <a href="quiz_list.php">Quizzes</a>
+                <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
+                    <?php if ($_SESSION['role'] === 'system_admin'): ?>
+                        <a href="organization_management.php">Organizations</a>
+                    <?php endif; ?>
+                    <a href="user_management.php">Users</a>
+                <?php endif; ?>
+            </nav>
+            <div class="user-section">
+                <a href="logout.php" class="logout-btn">Logout</a>
+            </div>
         </div>
     </div>
-    
-    <div class="african-container">
+
+    <div class="container">
+        <div class="page-header-section">
+            <div class="page-title-area">
+                <h2 class="page-title">Quiz Results</h2>
+                <p class="page-subtitle">Your cybersecurity assessment results</p>
+            </div>
+        </div>
         <!-- Results Summary -->
-        <div class="results-card">
-            <div class="result-icon <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
-                <?php echo $results['passed'] ? '🎉' : '📚'; ?>
-            </div>
-            
-            <div class="result-title <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
-                <?php echo $results['passed'] ? 'Congratulations!' : 'Keep Learning!'; ?>
-            </div>
-            
-            <div class="result-subtitle">
-                <?php echo htmlspecialchars($results['quiz_title']); ?>
-                <?php if (isset($results['user_name'])): ?>
-                    <br><small>Results for: <?php echo htmlspecialchars($results['user_name']); ?></small>
+        <div class="form-card">
+            <div class="results-card">
+                <div class="result-icon <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
+                    <?php echo $results['passed'] ? '🎉' : '📚'; ?>
+                </div>
+                
+                <div class="result-title <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
+                    <?php echo $results['passed'] ? 'Congratulations!' : 'Keep Learning!'; ?>
+                </div>
+                
+                <div class="result-subtitle">
+                    <?php echo htmlspecialchars($results['quiz_title']); ?>
+                    <?php if (isset($results['user_name'])): ?>
+                        <br><small>Results for: <?php echo htmlspecialchars($results['user_name']); ?></small>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="score-display <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
+                    <?php echo $results['score']; ?>%
+                </div>
+                
+                <div class="score-details">
+                    <div class="score-item">
+                        <div class="score-number"><?php echo $results['correct_answers']; ?></div>
+                        <div class="score-label">Correct</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-number"><?php echo $results['total_questions'] - $results['correct_answers']; ?></div>
+                        <div class="score-label">Incorrect</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-number"><?php echo $results['total_questions']; ?></div>
+                        <div class="score-label">Total</div>
+                    </div>
+                </div>
+                
+                <div class="passing-info">
+                    <strong>Passing Score:</strong> <?php echo $results['passing_score']; ?>% 
+                    <span class="<?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
+                        (<?php echo $results['passed'] ? '✅ Passed' : '❌ Failed'; ?>)
+                    </span>
+                </div>
+                
+                <?php if (isset($results['completed_at'])): ?>
+                    <small style="color: var(--text-medium);">Completed: <?php echo date('M j, Y g:i A', strtotime($results['completed_at'])); ?></small>
                 <?php endif; ?>
             </div>
-            
-            <div class="score-display <?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
-                <?php echo $results['score']; ?>%
-            </div>
-            
-            <div class="score-details">
-                <div class="score-item">
-                    <div class="score-number"><?php echo $results['correct_answers']; ?></div>
-                    <div class="score-label">Correct</div>
-                </div>
-                <div class="score-item">
-                    <div class="score-number"><?php echo $results['total_questions'] - $results['correct_answers']; ?></div>
-                    <div class="score-label">Incorrect</div>
-                </div>
-                <div class="score-item">
-                    <div class="score-number"><?php echo $results['total_questions']; ?></div>
-                    <div class="score-label">Total</div>
-                </div>
-            </div>
-            
-            <div class="passing-info">
-                <strong>Passing Score:</strong> <?php echo $results['passing_score']; ?>% 
-                <span class="<?php echo $results['passed'] ? 'passed' : 'failed'; ?>">
-                    (<?php echo $results['passed'] ? '✅ Passed' : '❌ Failed'; ?>)
-                </span>
-            </div>
-            
-            <?php if (isset($results['completed_at'])): ?>
-                <small>Completed: <?php echo date('M j, Y g:i A', strtotime($results['completed_at'])); ?></small>
-            <?php endif; ?>
         </div>
         
         <!-- Question Review (if available) -->
         <?php if (isset($results['question_results'])): ?>
-            <div class="question-review">
-                <h3>Question Review</h3>
-                <?php foreach ($results['question_results'] as $index => $question): ?>
-                    <div class="question-item">
-                        <div class="question-text">
-                            <?php echo ($index + 1); ?>. <?php echo htmlspecialchars($question['question_text']); ?>
-                        </div>
-                        <div class="answer-row">
-                            <span>Your Answer: <strong><?php echo htmlspecialchars($question['user_answer']); ?></strong></span>
-                            <span class="<?php echo $question['is_correct'] ? 'answer-correct' : 'answer-incorrect'; ?>">
-                                <?php echo $question['is_correct'] ? '✅ Correct' : '❌ Incorrect'; ?>
-                            </span>
-                        </div>
-                        <?php if (!$question['is_correct']): ?>
+            <div class="form-card">
+                <div class="question-review">
+                    <h3>Question Review</h3>
+                    <?php foreach ($results['question_results'] as $index => $question): ?>
+                        <div class="question-item">
+                            <div class="question-text">
+                                <?php echo ($index + 1); ?>. <?php echo htmlspecialchars($question['question_text']); ?>
+                            </div>
                             <div class="answer-row">
-                                <span>Correct Answer: <strong class="answer-correct"><?php echo htmlspecialchars($question['correct_answer']); ?></strong></span>
+                                <span>Your Answer: <strong><?php echo htmlspecialchars($question['user_answer']); ?></strong></span>
+                                <span class="<?php echo $question['is_correct'] ? 'answer-correct' : 'answer-incorrect'; ?>">
+                                    <?php echo $question['is_correct'] ? '✅ Correct' : '❌ Incorrect'; ?>
+                                </span>
                             </div>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($question['explanation'])): ?>
-                            <div class="explanation-box">
-                                <span class="explanation-label">💡 Explanation:</span>
-                                <div class="explanation-text"><?php echo htmlspecialchars($question['explanation']); ?></div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+                            <?php if (!$question['is_correct']): ?>
+                                <div class="answer-row">
+                                    <span>Correct Answer: <strong class="answer-correct"><?php echo htmlspecialchars($question['correct_answer']); ?></strong></span>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($question['explanation'])): ?>
+                                <div class="explanation-box">
+                                    <span class="explanation-label">💡 Explanation:</span>
+                                    <div class="explanation-text"><?php echo htmlspecialchars($question['explanation']); ?></div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
         
         <!-- Actions -->
-        <div class="actions">
-            <?php if (!$results['passed']): ?>
-                <a href="take_quiz.php?id=<?php echo $results['quiz_id']; ?>" class="btn btn-success">Retake Quiz</a>
-            <?php endif; ?>
-            <a href="quiz_list.php" class="btn btn-primary">Back to Quizzes</a>
-            <a href="dashboard.php" class="btn btn-secondary">Dashboard</a>
+        <div class="form-card">
+            <div class="actions">
+                <?php if (!$results['passed']): ?>
+                    <a href="take_quiz.php?id=<?php echo $results['quiz_id']; ?>" class="btn btn-success">Retake Quiz</a>
+                <?php endif; ?>
+                <a href="quiz_list.php" class="btn btn-primary">Back to Quizzes</a>
+                <a href="dashboard.php" class="btn btn-secondary">Dashboard</a>
+            </div>
         </div>
     </div>
 </body>
