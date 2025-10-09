@@ -16,27 +16,37 @@ if (empty($content_id)) {
 }
 
 try {
-    // Build security-aware query
+    // Build security-aware query for multilingual content
     if ($_SESSION['role'] === 'system_admin') {
         // System admin can view all content
         $stmt = $pdo->prepare("
-            SELECT c.*, ct.name as content_type_name, o.name as organization_name
+            SELECT c.*, cg.*, ct.name as content_type_name, o.name as organization_name,
+                   l.code as language_code, l.name as language_name,
+                   u.first_name || ' ' || u.last_name as uploaded_by_name
             FROM content c
-            LEFT JOIN content_types ct ON c.content_type_id = ct.id
-            LEFT JOIN organizations o ON c.organization_id = o.id
-            WHERE c.id = :id AND c.is_active = 1 
+            INNER JOIN content_groups cg ON c.content_group_id = cg.id
+            INNER JOIN languages l ON c.language_id = l.id
+            LEFT JOIN content_types ct ON cg.content_type_id = ct.id
+            LEFT JOIN organizations o ON cg.organization_id = o.id
+            LEFT JOIN users u ON c.uploaded_by = u.id
+            WHERE c.id = :id AND c.is_active = 1 AND cg.is_active = 1
             LIMIT 1
         ");
         $stmt->execute(['id' => $content_id]);
     } else {
         // Regular users can only view global content + their organization's content
         $stmt = $pdo->prepare("
-            SELECT c.*, ct.name as content_type_name, o.name as organization_name
+            SELECT c.*, cg.*, ct.name as content_type_name, o.name as organization_name,
+                   l.code as language_code, l.name as language_name,
+                   u.first_name || ' ' || u.last_name as uploaded_by_name
             FROM content c
-            LEFT JOIN content_types ct ON c.content_type_id = ct.id
-            LEFT JOIN organizations o ON c.organization_id = o.id
-            WHERE c.id = :id AND c.is_active = 1 
-            AND (c.organization_id IS NULL OR c.organization_id = :org_id)
+            INNER JOIN content_groups cg ON c.content_group_id = cg.id
+            INNER JOIN languages l ON c.language_id = l.id
+            LEFT JOIN content_types ct ON cg.content_type_id = ct.id
+            LEFT JOIN organizations o ON cg.organization_id = o.id
+            LEFT JOIN users u ON c.uploaded_by = u.id
+            WHERE c.id = :id AND c.is_active = 1 AND cg.is_active = 1
+            AND (cg.organization_id IS NULL OR cg.organization_id = :org_id)
             LIMIT 1
         ");
         $stmt->execute(['id' => $content_id, 'org_id' => $_SESSION['organization_id']]);
@@ -49,15 +59,28 @@ try {
         exit();
     }
     
+    // Get other available languages for this content group
+    $lang_stmt = $pdo->prepare("
+        SELECT c.id, c.title, l.code, l.name as language_name
+        FROM content c
+        INNER JOIN languages l ON c.language_id = l.id
+        WHERE c.content_group_id = :group_id AND c.is_active = 1 AND c.id != :current_id
+        ORDER BY l.name
+    ");
+    $lang_stmt->execute(['group_id' => $content['content_group_id'], 'current_id' => $content_id]);
+    $other_languages = $lang_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
     // Log content access for tracking
     try {
         $access_stmt = $pdo->prepare("
-            INSERT INTO content_access_logs (user_id, content_id, access_type, ip_address, user_agent, accessed_at)
-            VALUES (:user_id, :content_id, 'view', :ip_address, :user_agent, :accessed_at)
+            INSERT INTO content_access_logs (user_id, content_id, content_group_id, language_id, access_type, ip_address, user_agent, accessed_at)
+            VALUES (:user_id, :content_id, :content_group_id, :language_id, 'view', :ip_address, :user_agent, :accessed_at)
         ");
         $access_stmt->execute([
             'user_id' => $_SESSION['user_id'],
             'content_id' => $content_id,
+            'content_group_id' => $content['content_group_id'],
+            'language_id' => $content['language_id'],
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
             'accessed_at' => date('Y-m-d H:i:s')
@@ -112,6 +135,9 @@ if ($content['file_path']) {
                     <?php if (!empty($content['content_type_name'])): ?>
                         <span class="badge badge-type"><?php echo ucfirst($content['content_type_name']); ?></span>
                     <?php endif; ?>
+                    <?php if (!empty($content['language_name'])): ?>
+                        <span class="badge badge-lang"><?php echo htmlspecialchars($content['language_name']); ?></span>
+                    <?php endif; ?>
                     <?php 
                     $file_ext = strtolower(pathinfo($content['file_path'], PATHINFO_EXTENSION));
                     if ($file_ext): 
@@ -134,9 +160,35 @@ if ($content['file_path']) {
                         <span class="badge badge-org"><?php echo htmlspecialchars($content['organization_name']); ?></span>
                     <?php endif; ?>
                 </div>
+                
+                <!-- Language Switcher -->
+                <?php if (!empty($other_languages)): ?>
+                    <div class="language-switcher" style="margin: 15px 0; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">
+                        <strong>Available in other languages:</strong>
+                        <div style="margin-top: 8px;">
+                            <?php foreach ($other_languages as $lang): ?>
+                                <a href="view_content.php?id=<?php echo $lang['id']; ?>" 
+                                   class="btn-secondary" style="margin-right: 10px; margin-bottom: 5px; display: inline-block;">
+                                    <?php echo htmlspecialchars($lang['language_name']); ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
                 <?php if ($content['description']): ?>
                     <div class="content-description"><?php echo nl2br(htmlspecialchars($content['description'])); ?></div>
                 <?php endif; ?>
+                
+                <div class="content-meta" style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                    <?php if ($content['uploaded_by_name']): ?>
+                        <span>Uploaded by <?php echo htmlspecialchars($content['uploaded_by_name']); ?></span>
+                    <?php endif; ?>
+                    <span>Created: <?php echo date('M j, Y', strtotime($content['created_at'])); ?></span>
+                    <?php if ($content['file_size']): ?>
+                        <span>Size: <?php echo number_format($content['file_size'] / 1024, 1); ?> KB</span>
+                    <?php endif; ?>
+                </div>
             </div>
             
             <div class="content-viewer">

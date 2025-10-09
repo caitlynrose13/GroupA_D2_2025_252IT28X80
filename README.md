@@ -15,7 +15,7 @@ A web-based cybersecurity training platform for South African SMMEs with:
 ## Quick Start
 
 ```bash
-php -S localhost:3000 -t src/ src/router.php
+php -d upload_max_filesize=100M -d post_max_size=100M -S localhost:8000 -t src
 ```
 
 Visit: `http://localhost:3000/login.php`

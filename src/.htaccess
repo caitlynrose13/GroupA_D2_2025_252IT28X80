@@ -16,7 +16,7 @@
     Deny from all
 </FilesMatch>
 
-# Enable file uploads (adjust as needed)
+# Enable file uploads (500MB limit - should handle large videos)
 php_value upload_max_filesize 500M
 php_value post_max_size 500M
 php_value max_execution_time 300

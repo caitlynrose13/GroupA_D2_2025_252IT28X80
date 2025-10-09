@@ -137,41 +137,71 @@ CREATE TABLE departments (
 -- CONTENT MANAGEMENT TABLES
 -- =====================================================
 
--- Content table (Enhanced for multi-tenant)
-CREATE TABLE content (
+-- Languages lookup table for multilingual support
+CREATE TABLE languages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code VARCHAR(10) UNIQUE NOT NULL, -- ISO language codes like 'en', 'af', 'zu'
+    name VARCHAR(50) NOT NULL, -- Full language name like 'English', 'Afrikaans', 'Zulu'
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Content groups for linking multilingual content together
+CREATE TABLE content_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     organization_id INTEGER, -- NULL for global content
-    title VARCHAR(255) NOT NULL,
+    base_title VARCHAR(255) NOT NULL, -- Base title for the content group
     description TEXT,
-    file_path VARCHAR(500),
-    file_name VARCHAR(255),
-    file_size INTEGER,
-    external_url VARCHAR(500), -- For YouTube, external links
     content_type_id INTEGER NOT NULL,
-    month_number INTEGER CHECK (month_number >= 1 AND month_number <= 12), -- 1-12 for program months
+    month_number INTEGER CHECK (month_number >= 1 AND month_number <= 12),
     target_audience TEXT, -- JSON array of roles/departments
     is_mandatory BOOLEAN DEFAULT 1,
-    uploaded_by INTEGER NOT NULL,
+    created_by INTEGER NOT NULL,
     is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id),
     FOREIGN KEY (content_type_id) REFERENCES content_types(id),
-    FOREIGN KEY (uploaded_by) REFERENCES users(id)
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- Content access tracking
+-- Content table (Enhanced for multi-tenant and multilingual support)
+CREATE TABLE content (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content_group_id INTEGER NOT NULL, -- Links to content_groups
+    language_id INTEGER NOT NULL, -- Links to languages
+    title VARCHAR(255) NOT NULL, -- Language-specific title
+    description TEXT, -- Language-specific description
+    file_path VARCHAR(500),
+    file_name VARCHAR(255),
+    file_size INTEGER,
+    external_url VARCHAR(500), -- For YouTube, external links
+    uploaded_by INTEGER NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (content_group_id) REFERENCES content_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (language_id) REFERENCES languages(id),
+    FOREIGN KEY (uploaded_by) REFERENCES users(id),
+    UNIQUE(content_group_id, language_id) -- Only one content per language per group
+);
+
+-- Content access tracking (Updated for content groups)
 CREATE TABLE content_access_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     content_id INTEGER NOT NULL,
+    content_group_id INTEGER NOT NULL,
+    language_id INTEGER NOT NULL,
     access_type VARCHAR(20) NOT NULL, -- 'view', 'download', 'complete'
     duration_seconds INTEGER,
     ip_address VARCHAR(45),
     user_agent TEXT,
     accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (content_id) REFERENCES content(id)
+    FOREIGN KEY (content_id) REFERENCES content(id),
+    FOREIGN KEY (content_group_id) REFERENCES content_groups(id),
+    FOREIGN KEY (language_id) REFERENCES languages(id)
 );
 
 -- =====================================================
@@ -341,11 +371,18 @@ CREATE INDEX idx_users_role ON users(role_id);
 CREATE INDEX idx_users_manager ON users(manager_id);
 CREATE INDEX idx_users_status ON users(status_id);
 
--- Content indexes
-CREATE INDEX idx_content_organization ON content(organization_id);
-CREATE INDEX idx_content_type ON content(content_type_id);
-CREATE INDEX idx_content_month ON content(month_number);
+-- Content indexes (Updated for multilingual support)
+CREATE INDEX idx_content_groups_organization ON content_groups(organization_id);
+CREATE INDEX idx_content_groups_type ON content_groups(content_type_id);
+CREATE INDEX idx_content_groups_month ON content_groups(month_number);
+CREATE INDEX idx_content_groups_active ON content_groups(is_active);
+CREATE INDEX idx_content_group ON content(content_group_id);
+CREATE INDEX idx_content_language ON content(language_id);
 CREATE INDEX idx_content_active ON content(is_active);
+
+-- Language indexes
+CREATE INDEX idx_languages_code ON languages(code);
+CREATE INDEX idx_languages_active ON languages(is_active);
 
 -- Quiz indexes
 CREATE INDEX idx_quizzes_organization ON quizzes(organization_id);
@@ -357,8 +394,11 @@ CREATE INDEX idx_quiz_questions_order ON quiz_questions(quiz_id, question_order)
 -- Progress tracking indexes
 CREATE INDEX idx_employee_progress_user ON employee_progress(user_id);
 CREATE INDEX idx_employee_progress_month ON employee_progress(month_number);
+-- Content access indexes (Updated for multilingual support)
 CREATE INDEX idx_content_access_user ON content_access_logs(user_id);
 CREATE INDEX idx_content_access_content ON content_access_logs(content_id);
+CREATE INDEX idx_content_access_group ON content_access_logs(content_group_id);
+CREATE INDEX idx_content_access_language ON content_access_logs(language_id);
 
 -- Quiz results indexes
 CREATE INDEX idx_quiz_attempts_user ON quiz_attempts(user_id);
@@ -388,9 +428,9 @@ INSERT INTO roles (name, description, level, permissions) VALUES
 
 -- Insert content types
 INSERT INTO content_types (name, description, file_extensions, max_file_size) VALUES 
-('document', 'PDF and Word documents', '["pdf","doc","docx"]', 52428800),
-('image', 'Images and infographics', '["jpg","jpeg","png","gif"]', 10485760),
-('video', 'Video content', '["mp4","mov","avi"]', 524288000),
+('document', 'PDF and Word documents', '["pdf","doc","docx"]', 1073741824),
+('image', 'Images and infographics', '["jpg","jpeg","png","gif"]', 104857600),
+('video', 'Video content', '["mp4","mov","avi"]', 1073741824),
 ('external_link', 'External URLs and links', '[]', 0);
 
 -- Insert quiz statuses
@@ -416,4 +456,16 @@ INSERT INTO assessment_statuses (name, description) VALUES
 ('abandoned', 'Assessment started but not completed'),
 ('expired', 'Assessment time limit exceeded');
 
--- Program structure data moved to PHP constants file
+-- Insert default languages (South African context)
+INSERT INTO languages (code, name) VALUES 
+('en', 'English'),
+('af', 'Afrikaans'),
+('zu', 'isiZulu'),
+('xh', 'isiXhosa'),
+('st', 'Sesotho'),
+('tn', 'Setswana'),
+('ss', 'siSwati'),
+('ve', 'Tshivenda'),
+('ts', 'Xitsonga'),
+('nr', 'isiNdebele'),
+('nso', 'Sepedi');

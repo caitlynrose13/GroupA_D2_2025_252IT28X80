@@ -4,28 +4,92 @@ session_start();
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/program_structure.php';
 
-// Handle delete action
-if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
-    $delete_id = $_GET['delete'];
+// Handle delete action for content groups
+if (isset($_GET['delete_group']) && in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
+    $delete_group_id = $_GET['delete_group'];
     
     try {
         // Security check: ensure user can only delete content they have access to
         if ($_SESSION['role'] === 'system_admin') {
             $security_where = '1=1';
-            $security_params = ['id' => $delete_id];
+            $security_params = ['id' => $delete_group_id];
         } else {
             $security_where = '(organization_id IS NULL OR organization_id = :org_id)';
+            $security_params = ['id' => $delete_group_id, 'org_id' => $_SESSION['organization_id']];
+        }
+        
+        // Get all file paths before deleting from database
+        $stmt = $pdo->prepare("
+            SELECT c.file_path 
+            FROM content c 
+            INNER JOIN content_groups cg ON c.content_group_id = cg.id 
+            WHERE cg.id = :id AND $security_where
+        ");
+        $stmt->execute($security_params);
+        $content_files = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Check if group exists and user has access
+        $check_stmt = $pdo->prepare("SELECT id FROM content_groups WHERE id = :id AND $security_where LIMIT 1");
+        $check_stmt->execute($security_params);
+        
+        if ($check_stmt->fetch()) {
+            // Delete from database (content will be deleted by CASCADE)
+            $delete_stmt = $pdo->prepare("DELETE FROM content_groups WHERE id = :id AND $security_where");
+            $delete_stmt->execute($security_params);
+            
+            // Delete physical files
+            foreach ($content_files as $file_path) {
+                if ($file_path) {
+                    $full_path = __DIR__ . '/' . $file_path;
+                    if (file_exists($full_path)) {
+                        unlink($full_path);
+                    }
+                }
+            }
+            
+            header('Location: content_list.php?success=' . urlencode('Content group and all translations deleted successfully'));
+            exit();
+        } else {
+            header('Location: content_list.php?error=' . urlencode('Content group not found or access denied'));
+            exit();
+        }
+    } catch (PDOException $e) {
+        header('Location: content_list.php?error=' . urlencode('Error deleting content group'));
+        exit();
+    }
+}
+
+// Handle delete action for individual content (specific language)
+if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_admin'])) {
+    $delete_id = $_GET['delete'];
+    
+    try {
+        // Security check with content groups
+        if ($_SESSION['role'] === 'system_admin') {
+            $security_where = '1=1';
+            $security_params = ['id' => $delete_id];
+        } else {
+            $security_where = '(cg.organization_id IS NULL OR cg.organization_id = :org_id)';
             $security_params = ['id' => $delete_id, 'org_id' => $_SESSION['organization_id']];
         }
         
         // Get file path before deleting from database
-        $stmt = $pdo->prepare("SELECT file_path FROM content WHERE id = :id AND $security_where LIMIT 1");
+        $stmt = $pdo->prepare("
+            SELECT c.file_path, c.content_group_id
+            FROM content c 
+            INNER JOIN content_groups cg ON c.content_group_id = cg.id 
+            WHERE c.id = :id AND $security_where LIMIT 1
+        ");
         $stmt->execute($security_params);
         $content_to_delete = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($content_to_delete) {
             // Delete from database
-            $stmt = $pdo->prepare("DELETE FROM content WHERE id = :id AND $security_where");
+            $stmt = $pdo->prepare("
+                DELETE c FROM content c 
+                INNER JOIN content_groups cg ON c.content_group_id = cg.id 
+                WHERE c.id = :id AND $security_where
+            ");
             $stmt->execute($security_params);
             
             // Delete physical file
@@ -36,7 +100,7 @@ if (isset($_GET['delete']) && in_array($_SESSION['role'], ['system_admin', 'org_
                 }
             }
             
-            header('Location: content_list.php?success=' . urlencode('Content deleted successfully'));
+            header('Location: content_list.php?success=' . urlencode('Content language version deleted successfully'));
             exit();
         } else {
             header('Location: content_list.php?error=' . urlencode('Content not found or access denied'));
@@ -57,17 +121,18 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 // Get filter parameters
 $filter_type = $_GET['type'] ?? '';
 $filter_month = $_GET['month'] ?? '';
+$selected_language = $_GET['lang'] ?? 'en'; // Default to English
 
-// Build query with filters and multi-tenant security
-$where_conditions = ['c.is_active = 1'];
-$params = [];
+// Build query with filters and multi-tenant security for content groups
+$where_conditions = ['cg.is_active = 1'];
+$params = ['selected_lang' => $selected_language];
 
 // Multi-tenant security
 if ($_SESSION['role'] === 'system_admin') {
     // System admin can see all content
 } else {
     // Regular users can only see global content + their organization's content
-    $where_conditions[] = '(c.organization_id IS NULL OR c.organization_id = :org_id)';
+    $where_conditions[] = '(cg.organization_id IS NULL OR cg.organization_id = :org_id)';
     $params['org_id'] = $_SESSION['organization_id'];
 }
 
@@ -77,27 +142,48 @@ if (!empty($filter_type)) {
     $params['type'] = $filter_type;
 }
 if (!empty($filter_month)) {
-    $where_conditions[] = 'c.month_number = :month';
+    $where_conditions[] = 'cg.month_number = :month';
     $params['month'] = $filter_month;
 }
 
 $where_clause = implode(' AND ', $where_conditions);
 
 try {
+    // Get content groups with their available languages and selected language content
     $stmt = $pdo->prepare("
-        SELECT c.*, ct.name as content_type_name, o.name as organization_name,
-               u.first_name || ' ' || u.last_name as uploaded_by_name
-        FROM content c 
-        LEFT JOIN content_types ct ON c.content_type_id = ct.id
-        LEFT JOIN organizations o ON c.organization_id = o.id
-        LEFT JOIN users u ON c.uploaded_by = u.id
+        SELECT cg.*, ct.name as content_type_name, o.name as organization_name,
+               u.first_name || ' ' || u.last_name as created_by_name,
+               GROUP_CONCAT(DISTINCT l.code || ':' || l.name) as available_languages,
+               COUNT(DISTINCT c.language_id) as language_count,
+               selected_content.id as selected_content_id,
+               selected_content.title as selected_title,
+               selected_content.description as selected_description,
+               selected_content.file_path as selected_file_path,
+               selected_content.file_name as selected_file_name,
+               selected_content.file_size as selected_file_size,
+               selected_content.external_url as selected_external_url,
+               selected_lang.code as selected_lang_code,
+               selected_lang.name as selected_lang_name
+        FROM content_groups cg 
+        LEFT JOIN content_types ct ON cg.content_type_id = ct.id
+        LEFT JOIN organizations o ON cg.organization_id = o.id
+        LEFT JOIN users u ON cg.created_by = u.id
+        LEFT JOIN content c ON c.content_group_id = cg.id AND c.is_active = 1
+        LEFT JOIN languages l ON c.language_id = l.id
+        LEFT JOIN content selected_content ON selected_content.content_group_id = cg.id 
+            AND selected_content.is_active = 1
+            AND selected_content.language_id = (
+                SELECT l2.id FROM languages l2 WHERE l2.code = :selected_lang LIMIT 1
+            )
+        LEFT JOIN languages selected_lang ON selected_content.language_id = selected_lang.id
         WHERE $where_clause 
-        ORDER BY c.month_number ASC, c.created_at DESC
+        GROUP BY cg.id
+        ORDER BY cg.month_number ASC, cg.created_at DESC
     ");
     $stmt->execute($params);
-    $content_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $content_groups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $content_list = [];
+    $content_groups = [];
     $error = "Error loading content: " . $e->getMessage();
 }
 
@@ -108,6 +194,15 @@ try {
     $available_types = $type_stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (PDOException $e) {
     $available_types = [];
+}
+
+// Get available languages for language selector
+try {
+    $lang_stmt = $pdo->prepare("SELECT * FROM languages WHERE is_active = 1 ORDER BY name");
+    $lang_stmt->execute();
+    $available_languages = $lang_stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $available_languages = [];
 }
 
 $success = $_GET['success'] ?? '';
@@ -180,7 +275,7 @@ $error = $_GET['error'] ?? $error ?? '';
             <h3 style="margin-bottom: 20px; color: var(--primary-dark);">Filter Content</h3>
             <form method="GET" action="">
                 <div class="form-row">
-                    <div class="form-group half-width">
+                    <div class="form-group third-width">
                         <label for="type">Content Type</label>
                         <select id="type" name="type">
                             <option value="">All Types</option>
@@ -192,13 +287,24 @@ $error = $_GET['error'] ?? $error ?? '';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group half-width">
+                    <div class="form-group third-width">
                         <label for="month">Program Month</label>
                         <select id="month" name="month">
                             <option value="">All Months</option>
                             <?php foreach (PROGRAM_MONTHS as $month_num => $month_info): ?>
                                 <option value="<?php echo $month_num; ?>" <?php echo $filter_month === (string)$month_num ? 'selected' : ''; ?>>
                                     Month <?php echo $month_num; ?>: <?php echo htmlspecialchars($month_info['title']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group third-width">
+                        <label for="lang">Display Language</label>
+                        <select id="lang" name="lang" onchange="this.form.submit()">
+                            <?php foreach ($available_languages as $language): ?>
+                                <option value="<?php echo htmlspecialchars($language['code']); ?>" 
+                                        <?php echo $selected_language === $language['code'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($language['name']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -213,7 +319,7 @@ $error = $_GET['error'] ?? $error ?? '';
         </div>
 
         <!-- Content Grid -->
-        <?php if (empty($content_list)): ?>
+        <?php if (empty($content_groups)): ?>
             <div class="info-card" style="text-align: center; padding: 40px;">
                 <h3>No content found</h3>
                 <p>Try adjusting your filters or upload some content to get started.</p>
@@ -225,67 +331,131 @@ $error = $_GET['error'] ?? $error ?? '';
             </div>
         <?php else: ?>
             <div class="content-grid">
-                <?php foreach ($content_list as $content): ?>
+                <?php foreach ($content_groups as $group): ?>
                     <div class="content-card">
                         <div class="content-header">
-                            <h3><?php echo htmlspecialchars($content['title']); ?></h3>
+                            <h3><?php echo htmlspecialchars($group['selected_title'] ?: $group['base_title']); ?></h3>
+                            
                             <div class="content-badges">
                                 <span class="badge badge-type">
-                                    <?php echo htmlspecialchars($content['content_type_name']); ?>
+                                    <?php echo htmlspecialchars($group['content_type_name']); ?>
                                 </span>
-                                <?php if ($content['month_number']): ?>
+                                <?php if ($group['month_number']): ?>
                                     <span class="badge badge-month">
-                                        Month <?php echo $content['month_number']; ?>
+                                        Month <?php echo $group['month_number']; ?>
                                     </span>
                                 <?php endif; ?>
-                                <?php if ($content['organization_name']): ?>
+                                <?php if ($group['organization_name']): ?>
                                     <span class="badge badge-org">
-                                        <?php echo htmlspecialchars($content['organization_name']); ?>
+                                        <?php echo htmlspecialchars($group['organization_name']); ?>
                                     </span>
                                 <?php else: ?>
                                     <span class="badge badge-global">Global</span>
                                 <?php endif; ?>
+                                <span class="badge badge-lang">
+                                    <?php echo $group['language_count']; ?> language<?php echo $group['language_count'] != 1 ? 's' : ''; ?>
+                                </span>
                             </div>
                             
-                            <?php if ($content['description']): ?>
+                            <!-- Language Selection -->
+                            <?php if ($group['available_languages']): ?>
+                                <div class="language-selector" style="margin: 10px 0;">
+                                    <label style="font-size: 0.9em; color: #666;">Available in:</label>
+                                    <div class="language-options" style="margin-top: 5px;">
+                                        <?php 
+                                        $languages = explode(',', $group['available_languages']);
+                                        foreach ($languages as $lang_info): 
+                                            if (trim($lang_info)) {
+                                                list($code, $name) = explode(':', trim($lang_info), 2);
+                                                $is_current = ($code === $selected_language);
+                                                $link_params = $_GET;
+                                                $link_params['lang'] = $code;
+                                                $link_url = 'content_list.php?' . http_build_query($link_params);
+                                        ?>
+                                            <a href="<?php echo htmlspecialchars($link_url); ?>" 
+                                               class="language-option <?php echo $is_current ? 'active' : ''; ?>"
+                                               style="display: inline-block; margin-right: 8px; padding: 2px 8px; 
+                                                      border: 1px solid #ddd; border-radius: 3px; font-size: 0.8em; 
+                                                      text-decoration: none; color: #333;
+                                                      <?php echo $is_current ? 'background-color: #007cba; color: white;' : ''; ?>">
+                                                <?php echo htmlspecialchars($name); ?>
+                                            </a>
+                                        <?php 
+                                            }
+                                        endforeach; 
+                                        ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <?php if ($group['selected_description'] || $group['description']): ?>
                                 <p class="content-description">
-                                    <?php echo htmlspecialchars($content['description']); ?>
+                                    <?php echo htmlspecialchars($group['selected_description'] ?: $group['description']); ?>
                                 </p>
                             <?php endif; ?>
                             
                             <div class="content-meta">
-                                <?php if ($content['file_size']): ?>
-                                    <span><?php echo number_format($content['file_size'] / 1024, 1); ?> KB</span>
+                                <?php if ($group['selected_file_size']): ?>
+                                    <span><?php echo number_format($group['selected_file_size'] / 1024, 1); ?> KB</span>
                                 <?php endif; ?>
-                                <span><?php echo date('M j, Y', strtotime($content['created_at'])); ?></span>
-                                <?php if ($content['uploaded_by_name']): ?>
-                                    <span>by <?php echo htmlspecialchars($content['uploaded_by_name']); ?></span>
+                                <span><?php echo date('M j, Y', strtotime($group['created_at'])); ?></span>
+                                <?php if ($group['created_by_name']): ?>
+                                    <span>by <?php echo htmlspecialchars($group['created_by_name']); ?></span>
+                                <?php endif; ?>
+                                <?php if ($group['selected_lang_name']): ?>
+                                    <span>in <?php echo htmlspecialchars($group['selected_lang_name']); ?></span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         
                         <div class="content-actions">
-                            <?php if ($content['external_url']): ?>
-                                <a href="<?php echo htmlspecialchars($content['external_url']); ?>" 
-                                   target="_blank" class="btn-primary">
-                                    Open Link
-                                </a>
-                            <?php elseif ($content['file_path']): ?>
-                                <a href="view_content.php?id=<?php echo $content['id']; ?>" 
-                                   class="btn-primary">
-                                    View
-                                </a>
-                                <a href="download_content.php?id=<?php echo $content['id']; ?>" 
-                                   class="btn-secondary">
-                                    Download
-                                </a>
+                            <?php if ($group['selected_content_id']): ?>
+                                <!-- Content is available in selected language -->
+                                <?php if ($group['selected_external_url']): ?>
+                                    <a href="<?php echo htmlspecialchars($group['selected_external_url']); ?>" 
+                                       target="_blank" class="btn-primary">
+                                        Open Link
+                                    </a>
+                                <?php elseif ($group['selected_file_path']): ?>
+                                    <a href="view_content.php?id=<?php echo $group['selected_content_id']; ?>" 
+                                       class="btn-primary">
+                                        View
+                                    </a>
+                                    <a href="download_content.php?id=<?php echo $group['selected_content_id']; ?>" 
+                                       class="btn-secondary">
+                                        Download
+                                    </a>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <!-- Content not available in selected language -->
+                                <div class="not-available">
+                                    <span style="color: #999; font-style: italic;">
+                                        Not available in <?php echo htmlspecialchars($selected_language); ?>
+                                    </span>
+                                </div>
                             <?php endif; ?>
                             
                             <?php if (in_array($_SESSION['role'], ['system_admin', 'org_admin'])): ?>
-                                <a href="content_list.php?delete=<?php echo $content['id']; ?>" 
+                                <!-- Add translation link -->
+                                <a href="content_upload.php?group_id=<?php echo $group['id']; ?>" 
+                                   class="btn-secondary" title="Add translation">
+                                    + Translation
+                                </a>
+                                
+                                <?php if ($group['selected_content_id']): ?>
+                                    <!-- Delete specific language version -->
+                                    <a href="content_list.php?delete=<?php echo $group['selected_content_id']; ?>" 
+                                       class="btn-danger" 
+                                       onclick="return confirm('Are you sure you want to delete this language version?')">
+                                        Delete <?php echo htmlspecialchars($group['selected_lang_name'] ?: $selected_language); ?>
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <!-- Delete entire content group -->
+                                <a href="content_list.php?delete_group=<?php echo $group['id']; ?>" 
                                    class="btn-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this content?')">
-                                    Delete
+                                   onclick="return confirm('Are you sure you want to delete this entire content group and ALL language versions?')">
+                                    Delete All
                                 </a>
                             <?php endif; ?>
                         </div>

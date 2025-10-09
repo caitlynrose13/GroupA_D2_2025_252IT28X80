@@ -1,6 +1,7 @@
 <?php
 // filepath: src/config/db.php
 
+// Simple, working database path
 $db_file = __DIR__ . '/../../database/app.db';
 
 try {

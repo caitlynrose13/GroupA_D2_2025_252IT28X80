@@ -1,5 +1,6 @@
 <?php
 // filepath: src/process_upload.php
+require_once __DIR__ . '/config/upload_limits.php'; // Load upload config first
 session_start();
 require_once __DIR__ . '/config/db.php';
 
@@ -20,14 +21,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get form data
+$upload_type = $_POST['upload_type'] ?? '';
+$content_group_id = !empty($_POST['content_group_id']) ? (int)$_POST['content_group_id'] : null;
+$language_id = !empty($_POST['language_id']) ? (int)$_POST['language_id'] : null;
 $title = trim($_POST['title'] ?? '');
 $description = trim($_POST['description'] ?? '');
+$base_title = trim($_POST['base_title'] ?? '');
 $content_type = $_POST['content_type'] ?? '';
 $month_number = !empty($_POST['month_number']) ? (int)$_POST['month_number'] : null;
 
-// Validate required fields
-if (empty($title) || empty($content_type) || !isset($_FILES['file'])) {
+// Validate required fields based on upload type
+if (empty($upload_type) || empty($language_id) || empty($title) || !isset($_FILES['file'])) {
     header('Location: content_upload.php?error=' . urlencode('Please fill in all required fields'));
+    exit();
+}
+
+if ($upload_type === 'new' && (empty($base_title) || empty($content_type))) {
+    header('Location: content_upload.php?error=' . urlencode('Base title and content type are required for new content'));
+    exit();
+}
+
+if ($upload_type === 'translation' && empty($content_group_id)) {
+    header('Location: content_upload.php?error=' . urlencode('Please select an existing content group for translations'));
     exit();
 }
 
@@ -59,9 +74,9 @@ if ($file_error !== UPLOAD_ERR_OK) {
     exit();
 }
 
-// Check file size (500MB limit for large training videos)
-if ($file_size > 500 * 1024 * 1024) {
-    header('Location: content_upload.php?error=' . urlencode('File too large. Maximum 500MB allowed'));
+// Check file size (100MB limit should work for your 7MB file)
+if ($file_size > 100 * 1024 * 1024) {
+    header('Location: content_upload.php?error=' . urlencode('File too large. Maximum 100MB allowed'));
     exit();
 }
 
@@ -85,52 +100,108 @@ if (!move_uploaded_file($file_tmp, $file_path)) {
 }
 
 try {
-    // Get content type ID from content_types table
-    $type_stmt = $pdo->prepare("SELECT id FROM content_types WHERE name = :type LIMIT 1");
-    $type_stmt->execute(['type' => $content_type]);
-    $content_type_row = $type_stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$content_type_row) {
-        // If content type doesn't exist, create it
-        $insert_type = $pdo->prepare("INSERT INTO content_types (name, description) VALUES (:name, :description)");
-        $insert_type->execute([
-            'name' => $content_type,
-            'description' => ucfirst($content_type) . ' content'
-        ]);
-        $content_type_id = $pdo->lastInsertId();
-    } else {
-        $content_type_id = $content_type_row['id'];
-    }
+    // Start transaction for data consistency
+    $pdo->beginTransaction();
     
     // Determine organization_id (NULL for global content, org ID for org-specific)
     $organization_id = ($_SESSION['role'] === 'system_admin') ? null : $_SESSION['organization_id'];
     
-    // Insert into database
-    $stmt = $pdo->prepare("
-        INSERT INTO content (organization_id, title, description, file_path, file_name, file_size, content_type_id, month_number, uploaded_by, is_active) 
-        VALUES (:organization_id, :title, :description, :file_path, :file_name, :file_size, :content_type_id, :month_number, :uploaded_by, 1)
+    if ($upload_type === 'new') {
+        // Create new content group
+        
+        // Get or create content type ID
+        $type_stmt = $pdo->prepare("SELECT id FROM content_types WHERE name = :type LIMIT 1");
+        $type_stmt->execute(['type' => $content_type]);
+        $content_type_row = $type_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$content_type_row) {
+            // If content type doesn't exist, create it
+            $insert_type = $pdo->prepare("INSERT INTO content_types (name, description) VALUES (:name, :description)");
+            $insert_type->execute([
+                'name' => $content_type,
+                'description' => ucfirst($content_type) . ' content'
+            ]);
+            $content_type_id = $pdo->lastInsertId();
+        } else {
+            $content_type_id = $content_type_row['id'];
+        }
+        
+        // Create content group
+        $group_stmt = $pdo->prepare("
+            INSERT INTO content_groups (organization_id, base_title, description, content_type_id, month_number, created_by, is_active) 
+            VALUES (:organization_id, :base_title, :description, :content_type_id, :month_number, :created_by, 1)
+        ");
+        
+        $group_stmt->execute([
+            'organization_id' => $organization_id,
+            'base_title' => $base_title,
+            'description' => $description,
+            'content_type_id' => $content_type_id,
+            'month_number' => $month_number,
+            'created_by' => $_SESSION['user_id']
+        ]);
+        
+        $content_group_id = $pdo->lastInsertId();
+        
+    } else {
+        // Translation mode - verify access to existing group
+        $group_check_where = ($_SESSION['role'] === 'system_admin') ? '1=1' : '(organization_id IS NULL OR organization_id = :org_id)';
+        $group_check_params = ['group_id' => $content_group_id];
+        if ($_SESSION['role'] !== 'system_admin') {
+            $group_check_params['org_id'] = $_SESSION['organization_id'];
+        }
+        
+        $group_check = $pdo->prepare("SELECT id FROM content_groups WHERE id = :group_id AND $group_check_where AND is_active = 1 LIMIT 1");
+        $group_check->execute($group_check_params);
+        
+        if (!$group_check->fetch()) {
+            throw new Exception('Content group not found or access denied');
+        }
+    }
+    
+    // Check if this language already exists for this content group
+    $lang_check = $pdo->prepare("SELECT id FROM content WHERE content_group_id = :group_id AND language_id = :lang_id LIMIT 1");
+    $lang_check->execute(['group_id' => $content_group_id, 'lang_id' => $language_id]);
+    
+    if ($lang_check->fetch()) {
+        throw new Exception('Content in this language already exists for this content group. Please delete the existing version first.');
+    }
+    
+    // Insert content record
+    $content_stmt = $pdo->prepare("
+        INSERT INTO content (content_group_id, language_id, title, description, file_path, file_name, file_size, uploaded_by, is_active) 
+        VALUES (:content_group_id, :language_id, :title, :description, :file_path, :file_name, :file_size, :uploaded_by, 1)
     ");
     
-    $stmt->execute([
-        'organization_id' => $organization_id,
+    $content_stmt->execute([
+        'content_group_id' => $content_group_id,
+        'language_id' => $language_id,
         'title' => $title,
         'description' => $description,
         'file_path' => 'uploads/' . $unique_name,
         'file_name' => $file_name,
         'file_size' => $file_size,
-        'content_type_id' => $content_type_id,
-        'month_number' => $month_number,
         'uploaded_by' => $_SESSION['user_id']
     ]);
     
-    header('Location: content_upload.php?success=' . urlencode('Content uploaded successfully!'));
+    // Commit transaction
+    $pdo->commit();
+    
+    $success_message = ($upload_type === 'new') ? 'New content uploaded successfully!' : 'Translation added successfully!';
+    header('Location: content_upload.php?success=' . urlencode($success_message));
     exit();
     
-} catch (PDOException $e) {
-    // Delete uploaded file if database insert fails
-    unlink($file_path);
+} catch (Exception $e) {
+    // Rollback transaction
+    $pdo->rollBack();
+    
+    // Delete uploaded file if database operations fail
+    if (file_exists($file_path)) {
+        unlink($file_path);
+    }
+    
     error_log("Content upload error: " . $e->getMessage());
-    header('Location: content_upload.php?error=' . urlencode('Database error: ' . $e->getMessage()));
+    header('Location: content_upload.php?error=' . urlencode('Upload failed: ' . $e->getMessage()));
     exit();
 }
 ?>

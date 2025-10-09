@@ -28,6 +28,19 @@ replit.nix
 .DS_Store
 Thumbs.db
 
+# Uploaded files (keep directory structure but ignore uploaded content)
+src/uploads/*.pdf
+src/uploads/*.mp4
+src/uploads/*.docx
+src/uploads/*.pptx
+src/uploads/*.jpg
+src/uploads/*.png
+src/uploads/*.gif
+src/uploads/*_*.*
+!src/uploads/.gitkeep
+!src/uploads/documents/.gitkeep
+!src/uploads/images/.gitkeep
+
 # Temporary upload files
 src/uploads/tmp/
 
