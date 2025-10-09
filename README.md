@@ -1,7 +1,6 @@
-# 🛡️ Cybersecurity Awareness Platform
+# Cybersecurity Awareness Platform
 
-**Group A - D2 Deliverable (252IT28X80)**  
-**Status: ✅ Complete & Production Ready**
+**Group A - D2 Deliverable (252IT28X80)**
 
 ## What We Built
 
@@ -30,7 +29,7 @@ Visit: `http://localhost:3000/login.php`
 ## Tech Stack
 
 - **Backend**: PHP 8.2 + SQLite (20 tables)
-- **Frontend**: HTML/CSS with African-inspired design
+- **Frontend**: HTML/CSS
 - **Security**: Password hashing, prepared statements, role-based access
 - **Features**: Multi-tenant, file uploads, real-time progress tracking
 
